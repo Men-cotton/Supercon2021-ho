@@ -65,7 +65,7 @@ void backprop(int C[][N_GROUP], double I_PROB[], double C_back[][N_GROUP]) {
     double S_back[sc21::T + 1][N_GROUP] = {0},
                             I_back[sc21::T + 1][N_GROUP] = {0},
                             R_back[sc21::T + 1][N_GROUP] = {0};
-    C_back[N_GROUP][N_GROUP] = {0};
+    C_back = {0};
     for (int i = 0; i < N_GROUP; i++) {
         I_back[sc21::T][i] = I[sc21::T][i] - I_PROB[i];
     }

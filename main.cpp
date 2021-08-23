@@ -8,7 +8,7 @@ namespace sc21 {
 }
 
 // CとI_PROBを与えると誤差を返す関数。
-double simulator(int C[][N_GROUP], double I_PROB[]) {
+double simulator(double C[][N_GROUP], double I_PROB[]) {
     double S[sc21::T + 1][N_GROUP] = {0}, I[sc21::T + 1][N_GROUP] = {0},
                        R[sc21::T + 1][N_GROUP] = {0};
     for (int i = 0; i < N_GROUP; i++) {
@@ -39,7 +39,14 @@ double simulator(int C[][N_GROUP], double I_PROB[]) {
     return loss;
 }
 
-void backprop(int C[][N_GROUP], double I_PROB[], double C_back[][N_GROUP]) {
+void print(double x[N_GROUP]) {
+    for (int i = 0; i < N_GROUP; i++) {
+        printf("%le ", x[i]);
+    }
+    printf("\n");
+}
+
+void backprop(double C[][N_GROUP], double I_PROB[], double C_back[][N_GROUP]) {
     double S[sc21::T + 1][N_GROUP] = {0}, I[sc21::T + 1][N_GROUP] = {0},
                        R[sc21::T + 1][N_GROUP] = {0};
     for (int i = 0; i < N_GROUP; i++) {
@@ -65,29 +72,37 @@ void backprop(int C[][N_GROUP], double I_PROB[], double C_back[][N_GROUP]) {
     double S_back[sc21::T + 1][N_GROUP] = {0},
                             I_back[sc21::T + 1][N_GROUP] = {0},
                             R_back[sc21::T + 1][N_GROUP] = {0};
-    C_back = {0};
+
+    std::fill(C_back[0], C_back[N_GROUP], 0.0);
+
     for (int i = 0; i < N_GROUP; i++) {
-        I_back[sc21::T][i] = I[sc21::T][i] - I_PROB[i];
+        I_back[sc21::T][i] = (I[sc21::T][i] - I_PROB[i]) * 2;
     }
     for (int t = sc21::T - 1; t >= 0; t--) {
         for (int i = 0; i < N_GROUP; i++) {
-            R_back[t][i] = R_back[t + 1][i];
-            I_back[t][i] = sc21::GAMMA * R_back[t + 1][i] + I_back[t + 1][i] +
-                           sc21::BETA * I_back[t + 1][i] * S[t][i] -
-                           sc21::GAMMA * I_back[t + 1][i] -
-                           sc21::BETA * S[t][i] * S_back[t + 1][i];
-            S_back[t][i] = sc21::BETA * I_back[t + 1][i] * I[t][i] +
-                           S_back[t + 1][i] -
-                           sc21::BETA * I[t][i] * S_back[t + 1][i];
-            double sum = I_back[t + 1][i] - S_back[t + 1][i];
-            S_back[t][i] += sc21::BETA2 * sum;
-            sum *= sc21::BETA2 * S[t][i];
+            R_back[t][i] += R_back[t + 1][i];
+            I_back[t][i] += sc21::GAMMA * R_back[t + 1][i] + I_back[t + 1][i] +
+                            sc21::BETA * I_back[t + 1][i] * S[t][i] -
+                            sc21::GAMMA * I_back[t + 1][i] -
+                            sc21::BETA * S[t][i] * S_back[t + 1][i];
+            S_back[t][i] += sc21::BETA * I_back[t + 1][i] * I[t][i] +
+                            S_back[t + 1][i] -
+                            sc21::BETA * I[t][i] * S_back[t + 1][i];
+            double sum_back = I_back[t + 1][i] - S_back[t + 1][i];
+            double sum = 0;
+            for (int j = 0; j < N_GROUP; j++) {
+                sum += C[i][j] * I[t][j];
+            }
+
+            S_back[t][i] += sc21::BETA2 * sum * sum_back;
+            sum_back *= sc21::BETA2 * S[t][i];
 
             for (int j = 0; j < N_GROUP; j++) {
-                I_back[t][i] += sum * C[i][j];
-                C_back[i][j] += sum * I[t][j];
+                I_back[t][j] += sum_back * C[i][j];
+                C_back[i][j] += sum_back * I[t][j];
             }
         }
     }
+    return;
 }
-int main() {}
+// int main() {}

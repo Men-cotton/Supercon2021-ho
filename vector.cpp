@@ -15,6 +15,19 @@ struct vec {
     double v[L];
     double operator[](const int i) const { return v[i]; }
     double& operator[](const int i) { return v[i]; }
+    vec() {}
+    vec(double* a) {
+        for (int i = 0; i < L; i++) {
+            v[i] = a[i];
+        }
+    }
+    vec(std::initializer_list<double> a) {
+        auto itr = a.begin();
+        for (int i = 0; i < L; i++) {
+            v[i] = *itr;
+            itr++;
+        }
+    }
     vec operator=(const vec& a) { memcpy(v, a.v, sizeof(a.v)); }
     vec operator=(double* a) {
         for (int i = 0; i < L; i++) {
@@ -103,12 +116,14 @@ vec<L> vec<L>::mul(mat<L>& b) {
 }
 
 int main() {
-    // sample 微妙
+    // sample
     double c[2] = {1.0, 2.0};
-    vec<2> a, b = {1.0, 2.0};
-    a = c;
+    vec<2> b = {1.0, 2.0};
+    vec<2> a = c;
     a *= 2.0;
     a.show();
+    b.show();
+
     printf("%.5lf\n", a.dot(b));
 
     mat<2> m = {vec<2>{1.0, 2.0}, vec<2>{3.0, 4.0}};

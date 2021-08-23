@@ -7,19 +7,19 @@ namespace sc21 {
 #include "sc21.h"
 }
 
-const int L = 2;
+template <int L>
+struct mat;
 
+template <int L>
 struct vec {
     double v[L];
     double operator[](const int i) const { return v[i]; }
     double& operator[](const int i) { return v[i]; }
     vec operator=(const vec& a) { memcpy(v, a.v, sizeof(a.v)); }
     vec operator=(double* a) {
-        for (int i = 0; i < L; i++)
-        {
+        for (int i = 0; i < L; i++) {
             v[i] = a[i];
         }
-        
     }
     vec& operator+=(const vec& a) {
         for (int i = 0; i < L; i++) {
@@ -61,6 +61,14 @@ struct vec {
         res *= a;
         return res;
     }
+    vec mul(mat<L>& b);
+    double dot(vec& b) {
+        double res = 0.0;
+        for (int i = 0; i < L; i++) {
+            res += (*this)[i] * b[i];
+        }
+        return res;
+    }
     void show() {
         for (int i = 0; i < L - 1; i++) {
             printf("%.5lf ", v[i]);
@@ -69,43 +77,41 @@ struct vec {
     }
 };
 
+template <int L>
 struct mat {
-    vec m[L];
-    vec operator[](const int i) const {return m[i];}
-    vec& operator[](const int i){return m[i];}
+    vec<L> m[L];
+    vec<L> operator[](const int i) const { return m[i]; }
+    vec<L>& operator[](const int i) { return m[i]; }
     mat operator=(const mat& a) { memcpy(m, a.m, sizeof(a.m)); }
-    void show(){
-        for (int i = 0; i < L; i++)
-        {
+    void show() {
+        for (int i = 0; i < L; i++) {
             m[i].show();
         }
     }
 };
 
 //ベクトルと行列の積
-vec mul(vec& a,mat& b){
+template <int L>
+vec<L> vec<L>::mul(mat<L>& b) {
     vec res = {};
-    for (int i = 0; i < L; i++)
-    {
-        for (int j = 0; j < L; j++)
-        {
-            res[i] += a[j]*b[j][i];
+    for (int i = 0; i < L; i++) {
+        for (int j = 0; j < L; j++) {
+            res[i] += (*this)[j] * b[j][i];
         }
-        
     }
     return res;
 }
 
-
 int main() {
     // sample 微妙
-    double c[2] = {1.0,2.0};
-    vec a, b = {1.0, 2.0};
+    double c[2] = {1.0, 2.0};
+    vec<2> a, b = {1.0, 2.0};
     a = c;
     a *= 2.0;
     a.show();
+    printf("%.5lf\n", a.dot(b));
 
-    mat m = {vec{1.0,2.0},vec{3.0,4.0}};
-    b = mul(b,m);
+    mat<2> m = {vec<2>{1.0, 2.0}, vec<2>{3.0, 4.0}};
+    b = b.mul(m);
     b.show();
 }

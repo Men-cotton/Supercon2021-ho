@@ -39,7 +39,7 @@ double simulator(int C[][N_GROUP], double I_PROB[]) {
     return loss;
 }
 
-double backprop(int C[][N_GROUP], double I_PROB[], double C_back[][N_GROUP]) {
+void backprop(int C[][N_GROUP], double I_PROB[], double C_back[][N_GROUP]) {
     double S[sc21::T + 1][N_GROUP] = {0}, I[sc21::T + 1][N_GROUP] = {0},
                        R[sc21::T + 1][N_GROUP] = {0};
     for (int i = 0; i < N_GROUP; i++) {

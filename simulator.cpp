@@ -3,17 +3,7 @@
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
-#define N_GROUP 2
-const int T = 200;
-const double BETA = 0.0002;
-const double BETA2 = 0.000001;
-const double GAMMA = 0.1;
-void SC_input();
-void SC_output();
-int N_LINK;
-int N[N_GROUP];
-double I_PROB[N_GROUP];
-int C[N_GROUP][N_GROUP];
+#include "sc21.h"
 
 //CとI_PROBを与えると誤差を返す関数。
 double simulator(int C_[][N_GROUP], double I_PROB_[]) {
@@ -47,4 +37,5 @@ double simulator(int C_[][N_GROUP], double I_PROB_[]) {
     return loss;
 }
 int main() {
+    printf("hello\n");
 }

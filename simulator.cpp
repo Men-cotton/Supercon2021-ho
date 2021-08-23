@@ -37,5 +37,4 @@ double simulator(int C_[][N_GROUP], double I_PROB_[]) {
     return loss;
 }
 int main() {
-    printf("hello\n");
 }

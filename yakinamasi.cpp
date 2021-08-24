@@ -62,7 +62,19 @@ void sa(int C[][N_GROUP]){
         double prob=exp((new_score-pre_score)/temp);
 
         if(prob>(xor128()%1280000)/1280000){
-            C=new_state;
+            for(int i=0;i<100;i++){
+                for(int j=0;j<100;j++){
+                    C[i][j]=new_state[i][j];
+                }
+            }
         }
     }
+}
+
+main(){
+    sc21::SC_input();
+
+    sa(sc21::C);
+
+    sc21::SC_output();
 }

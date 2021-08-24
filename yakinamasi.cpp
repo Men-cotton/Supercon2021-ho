@@ -62,8 +62,8 @@ void sa(int C[][N_GROUP]){
         double prob=exp((new_score-pre_score)/temp);
 
         if(prob>(xor128()%1280000)/1280000){
-            for(int i=0;i<100;i++){
-                for(int j=0;j<100;j++){
+            for(int i=0;i<N_GROUP;i++){
+                for(int j=0;j<N_GROUP;j++){
                     C[i][j]=new_state[i][j];
                 }
             }

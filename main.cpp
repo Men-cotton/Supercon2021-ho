@@ -135,9 +135,7 @@ void init_C(double C[][N_GROUP]) {
     // std::fill(C[0], C[N_GROUP], 0.0);
     for (int i = 0; i < N_GROUP; i++) {
         for (int j = 0; j < N_GROUP; j++) {
-            if (i <= j)
-                C[i][j] = C[j][i] = (double)xor128() / UINT_MAX * sc21::N_LINK /
-                                    (N_GROUP * N_GROUP);
+            if (i <= j) C[i][j] = C[j][i] = (double)xor128() / UINT_MAX;
         }
     }
 }
@@ -183,7 +181,7 @@ int main() {
     init_C(C);
 
     const double lr = 1e-3, beta1 = 0.9, beta2 = 0.999;
-    // const double quant_lambda
+    const double quant_lambda = 100.0;
 
     const int q = 1000;
     for (int iter = 1; iter <= q; iter++) {
@@ -198,7 +196,9 @@ int main() {
         for (int i = 0; i < N_GROUP; i++) {
             for (int j = 0; j < N_GROUP; j++) {
                 if (i < j) {
-                    double grad = C_back[i][j] + C_back[j][i];
+                    double grad = C_back[i][j] + C_back[j][i] +
+                                  quant_lambda * quant_loss_diff(C[i][j]) *
+                                      ((double)iter / q);
 
                     C_m[i][j] += (1 - beta1) * (grad - C_m[i][j]);
                     C_v[i][j] += (1 - beta2) * (grad * grad - C_v[i][j]);
@@ -210,6 +210,7 @@ int main() {
         }
     }
 
+    print(C[0]);
     for (int i = 0; i < N_GROUP; i++) {
         for (int j = 0; j < N_GROUP; j++) {
             sc21::C[i][j] = std::round(C[i][j]);

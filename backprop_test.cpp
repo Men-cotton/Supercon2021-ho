@@ -18,8 +18,8 @@ double simulator_double(double C[][N_GROUP], double I_PROB[]) {
             }
             sum *= sc21::BETA2 * S[t][i];
             S[t + 1][i] = S[t][i] - sc21::BETA * S[t][i] * I[t][i] - sum;
-            I[t + 1][i] = I[t][i] + sc21::BETA * S[t][i] * I[t][i] + sum -
-                          sc21::GAMMA * I[t][i];
+            I[t + 1][i] =
+                I[t][i] * (1 + sc21::BETA * S[t][i] - sc21::GAMMA) + sum;
             R[t + 1][i] = R[t][i] + sc21::GAMMA * I[t][i];
         }
     }
@@ -32,21 +32,21 @@ double simulator_double(double C[][N_GROUP], double I_PROB[]) {
     return loss;
 }
 
-void diff(double C[][N_GROUP], double I_PROB[], double C_back[][N_GROUP]) {
-    std::fill(C_back[0], C_back[N_GROUP], 0.0);
-    double eps = 1e-3;
+// void diff(double C[][N_GROUP], double I_PROB[], double C_back[][N_GROUP]) {
+//     std::fill(C_back[0], C_back[N_GROUP], 0.0);
+//     double eps = 1e-3;
 
-    for (int i = 0; i < 1; i++) {
-        for (int j = 0; j < N_GROUP; j++) {
-            C[i][j] -= eps;
-            double from = simulator(C, I_PROB);
-            C[i][j] += 2 * eps;
-            double to = simulator(C, I_PROB);
-            C[i][j] -= eps;
-            C_back[i][j] = (to - from) / eps / 2;
-        }
-    }
-}
+//     for (int i = 0; i < 1; i++) {
+//         for (int j = 0; j < N_GROUP; j++) {
+//             C[i][j] -= eps;
+//             double from = simulator(C, I_PROB);
+//             C[i][j] += 2 * eps;
+//             double to = simulator(C, I_PROB);
+//             C[i][j] -= eps;
+//             C_back[i][j] = (to - from) / eps / 2;
+//         }
+//     }
+// }
 int main() {
     sc21::SC_input();
 
@@ -54,13 +54,12 @@ int main() {
     double C_double[N_GROUP][N_GROUP];
     for (int i = 0; i < N_GROUP; i++) {
         for (int j = 0; j < N_GROUP; j++) {
-            sc21::C[i][j] = 1;
+            sc21::C[i][j] = (i + j) % 2;
             C_double[i][j] = (double)sc21::C[i][j];
         }
     }
 
     backprop(sc21::C, sc21::I_PROB, C_back_1);
-    diff(C_double, sc21::I_PROB, C_back_2);
 
     for (int i = 0; i < 1; i++) {
         for (int j = 0; j < N_GROUP; j++) {

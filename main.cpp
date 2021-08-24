@@ -173,6 +173,18 @@ self.beta1**self.iter)
 
 double quant_loss_diff(double x) { return 2 * x * ((2 * x - 3) * x + 1); }
 
+double sum_nlink_sub(double C[][N_GROUP]) {
+    double sum = 0.0;
+    for (int i = 0; i < N_GROUP; i++) {
+        for (int j = 0; j < N_GROUP; j++) {
+            if (i < j) {
+                sum += C[i][j];
+            }
+        }
+    }
+    return sum - sc21::N_LINK;
+}
+
 int main() {
     sc21::SC_input();
 
@@ -181,13 +193,15 @@ int main() {
     init_C(C);
 
     const double lr = 1e-3, beta1 = 0.9, beta2 = 0.999;
-    const double quant_lambda = 100.0;
+    const double quant_lambda = 1.0;
+    const double nlink_lambda = 1.0;
 
     const int q = 1000;
     for (int iter = 1; iter <= q; iter++) {
         double C_back[N_GROUP][N_GROUP];
 
         double loss = backprop(C, sc21::I_PROB, C_back);
+        double n_link_loss_diff = sum_nlink_sub(C) * nlink_lambda;
         printf("%le\n", loss);
 
         const double lr_t = lr * std::sqrt(1.0 - std::pow(beta2, iter)) /
@@ -198,7 +212,8 @@ int main() {
                 if (i < j) {
                     double grad = C_back[i][j] + C_back[j][i] +
                                   quant_lambda * quant_loss_diff(C[i][j]) *
-                                      ((double)iter / q);
+                                      ((double)iter / q) +
+                                  n_link_loss_diff;
 
                     C_m[i][j] += (1 - beta1) * (grad - C_m[i][j]);
                     C_v[i][j] += (1 - beta2) * (grad * grad - C_v[i][j]);

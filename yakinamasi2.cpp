@@ -21,8 +21,8 @@ unsigned int xor128() {
 
 // CとI_PROBを与えると誤差を返す関数。
 double simulator(int C[][N_GROUP], double I_PROB[]) {
-    double S[sc21::T + 1][N_GROUP] = {0}, I[sc21::T + 1][N_GROUP] = {0},
-                       R[sc21::T + 1][N_GROUP] = {0};
+    double S[sc21::T + 1][N_GROUP] = {0}, I[sc21::T + 1][N_GROUP] = {0};
+                       //R[sc21::T + 1][N_GROUP] = {0};
     for (int i = 0; i < N_GROUP; i++) {
         S[0][i] = sc21::N[i];
     }
@@ -39,7 +39,7 @@ double simulator(int C[][N_GROUP], double I_PROB[]) {
             S[t + 1][i] = S[t][i] - sc21::BETA * S[t][i] * I[t][i] - sum;
             I[t + 1][i] = I[t][i] + sc21::BETA * S[t][i] * I[t][i] + sum -
                           sc21::GAMMA * I[t][i];
-            R[t + 1][i] = R[t][i] + sc21::GAMMA * I[t][i];
+            //R[t + 1][i] = R[t][i] + sc21::GAMMA * I[t][i];
         }
     }
 
@@ -111,6 +111,7 @@ void sa(int C[][N_GROUP]) {
         }
     }
     std::cout << cnt << "\n";
+
     for (int i = 0; i < sc21::N_LINK - N_GROUP - cnt; i++) {
         while (true) {
             int a = xor128() % N_GROUP, b = xor128() % N_GROUP;

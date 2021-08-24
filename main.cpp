@@ -136,11 +136,7 @@ void init_C(double C[][N_GROUP]) {
     // std::fill(C[0], C[N_GROUP], 0.0);
     for (int i = 0; i < N_GROUP; i++) {
         for (int j = 0; j < N_GROUP; j++) {
-            if (i <= j) C[i][j] = C[j][i] = 0.5;
-            if (j == N_GROUP - 1)
-                printf("%le\n", C[i][j]);
-            else
-                printf("%le ", C[i][j]);
+            if (i <= j) C[i][j] = C[j][i] = (double)xor128() / UINT_MAX;
         }
     }
 }
@@ -163,16 +159,31 @@ class Adam:
             for param in params:
                 self.m.append(np.zeros_like(param))
                 self.v.append(np.zeros_like(param))
+
         self.iter += 1
         lr_t = self.lr * np.sqrt(1.0 - self.beta2**self.iter) / (1.0 -
 self.beta1**self.iter)
+
         for i in range(len(params)):
             self.m[i] += (1 - self.beta1) * (grads[i] - self.m[i])
             self.v[i] += (1 - self.beta2) * (grads[i]**2 - self.v[i])
+
             params[i] -= lr_t * self.m[i] / (np.sqrt(self.v[i]) + 1e-7)
 */
 
 double quant_loss_diff(double x) { return 2 * x * ((2 * x - 3) * x + 1); }
+
+double sum_nlink_sub(double C[][N_GROUP]) {
+    double sum = 0.0;
+    for (int i = 0; i < N_GROUP; i++) {
+        for (int j = 0; j < N_GROUP; j++) {
+            if (i < j) {
+                sum += C[i][j];
+            }
+        }
+    }
+    return sum - sc21::N_LINK;
+}
 
 int main() {
     sc21::SC_input();
@@ -183,11 +194,16 @@ int main() {
     const double lr = 1e-3, beta1 = 0.9, beta2 = 0.999;
     // const double quant_lambda
 
+    const double lr = 1e-3, beta1 = 0.9, beta2 = 0.999;
+    const double quant_lambda = 1.0;
+    const double nlink_lambda = 1.0;
+
     const int q = 1000;
     for (int iter = 1; iter <= q; iter++) {
         double C_back[N_GROUP][N_GROUP];
 
         double loss = backprop(C, sc21::I_PROB, C_back);
+        double n_link_loss_diff = sum_nlink_sub(C) * nlink_lambda;
         printf("%le\n", loss);
 
         const double lr_t = lr * std::sqrt(1.0 - std::pow(beta2, iter)) /
@@ -196,7 +212,10 @@ int main() {
         for (int i = 0; i < N_GROUP; i++) {
             for (int j = 0; j < N_GROUP; j++) {
                 if (i < j) {
-                    double grad = C_back[i][j] + C_back[j][i];
+                    double grad = C_back[i][j] + C_back[j][i] +
+                                  quant_lambda * quant_loss_diff(C[i][j]) *
+                                      ((double)iter / q) +
+                                  n_link_loss_diff;
 
                     C_m[i][j] += (1 - beta1) * (grad - C_m[i][j]);
                     C_v[i][j] += (1 - beta2) * (grad * grad - C_v[i][j]);
@@ -208,6 +227,7 @@ int main() {
         }
     }
 
+    print(C[0]);
     for (int i = 0; i < N_GROUP; i++) {
         for (int j = 0; j < N_GROUP; j++) {
             sc21::C[i][j] = std::round(C[i][j]);

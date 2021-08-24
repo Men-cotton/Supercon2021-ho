@@ -5,21 +5,6 @@
 #include <stdlib.h>
 #include "./main.cpp"
 
-namespace sc21 {
-#include "sc21.h"
-}
-
-unsigned int xor128() {
-    static unsigned int x = 123456789, y = 362436069, z = 521288629,
-                        w = 88675123;
-    unsigned int t;
-    t = (x ^ (x << 11));
-    x = y;
-    y = z;
-    z = w;
-    return (w = (w ^ (w >> 19)) ^ (t ^ (t >> 8)));
-}
-
 void modify(int C[][N_GROUP],int change){
     if(change<=0)return;
     for(int i=0;i<change;i++){

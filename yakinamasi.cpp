@@ -109,12 +109,19 @@ void sa(int C[][N_GROUP]){
         double now_t = getTime(start_cycle);
         if(now_t>TIME_LIMIT)break;
 
-        auto new_state=C;
+        int new_state[N_GROUP][N_GROUP];
+
+        for(int i=0;i<N_GROUP;i++){
+            for(int j=0;j<N_GROUP;j++){
+                new_state[i][j]=C[i][j];
+            }
+        }
 
         //だんだん変更量を減少させるように
-        int change=1+10-10*(sc21::TIME0-start_cycle)/TIME_LIMIT;
+        int change=1+10-10*(now_t)/TIME_LIMIT;
         
         modify(new_state,change);
+
         double new_score=simulator(new_state,sc21::I_PROB);
         double pre_score=simulator(C,sc21::I_PROB);
 
@@ -135,6 +142,11 @@ int main(){
     sc21::SC_input();
 
     sa(sc21::C);
+
+    /*
+    提出時にはここを消せ！！！！！！！！！！！
+    std::cout<<simulator(sc21::C,sc21::I_PROB)<<"\n";
+    */
 
     sc21::SC_output();
 }

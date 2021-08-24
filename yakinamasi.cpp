@@ -59,7 +59,7 @@ void sa(int C[][N_GROUP]){
         }
     }
 
-    double start_temp=50,end_temp=10;
+    double start_temp=100000,end_temp=0;
     double TIME_LIMIT=295.0;
 
     while(true){
@@ -76,7 +76,7 @@ void sa(int C[][N_GROUP]){
         double temp=start_temp+(end_temp-start_temp)*(sc21::TIME0-start_time)/TIME_LIMIT;
         double prob=exp((new_score-pre_score)/temp);
 
-        if(prob>(xor128()%128)/128){
+        if(prob>(xor128()%1280000)/1280000){
             C=new_state;
         }
     }

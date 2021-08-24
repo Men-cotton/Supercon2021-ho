@@ -175,7 +175,7 @@ int main() {
         std::sort(should_one.begin(), should_one.end());
 
         int swap_num =
-            std::min((int)std::min(should_zero.size(), should_one.size()), 1);
+            std::min({should_zero.size(), should_one.size(), (size_t)1});
         for (int s = 0; s < swap_num; s++) {
             {
                 auto& [grad, i, j] = should_zero[s];

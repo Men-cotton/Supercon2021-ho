@@ -1,4 +1,4 @@
-#include "./main.cpp"
+#include "main.cpp"
 
 // CとI_PROBを与えると誤差を返す関数。
 double simulator_double(double C[][N_GROUP], double I_PROB[]) {
@@ -68,4 +68,5 @@ int main() {
                    C_back_2[i][j]);
         }
     }
+    sc21::SC_output();
 }

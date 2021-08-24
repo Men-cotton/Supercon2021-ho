@@ -58,7 +58,8 @@ void print(double x[N_GROUP]) {
     printf("\n");
 }
 
-double backprop(int C[][N_GROUP], double I_PROB[], double C_back[][N_GROUP]) {
+double backprop(double C[][N_GROUP], double I_PROB[],
+                double C_back[][N_GROUP]) {
     double S[sc21::T + 1][N_GROUP] = {0}, I[sc21::T + 1][N_GROUP] = {0},
                        R[sc21::T + 1][N_GROUP] = {0};
     for (int i = 0; i < N_GROUP; i++) {
@@ -121,28 +122,24 @@ double backprop(int C[][N_GROUP], double I_PROB[], double C_back[][N_GROUP]) {
     return loss;
 }
 
-void init_C(int C[][N_GROUP]) {
-    std::fill(C[0], C[N_GROUP], 0);
-    for (int i = 0; i < sc21::N_LINK; i++) {
-        int a, b;
-        while (true) {
-            a = xor128() % N_GROUP;
-            b = xor128() % N_GROUP;
-
-            if (a < b && C[a][b] == 0) {
-                break;
-            }
+void init_C(double C[][N_GROUP]) {
+    // std::fill(C[0], C[N_GROUP], 0.0);
+    for (int i = 0; i < N_GROUP; i++) {
+        for (int j = 0; j < N_GROUP; j++) {
+            if (i <= j)
+                C[i][j] = C[j][i] = (double)xor128() / UINT_MAX * sc21::N_LINK /
+                                    (N_GROUP * N_GROUP);
         }
-
-        C[a][b] = C[b][a] = 1;
     }
 }
 
 int main() {
     sc21::SC_input();
 
-    int C[N_GROUP][N_GROUP];
+    double C[N_GROUP][N_GROUP];
     init_C(C);
+
+    const double lr = 1e-4;
 
     int q = 100;
     while (q--) {
@@ -151,36 +148,17 @@ int main() {
         double loss = backprop(C, sc21::I_PROB, C_back);
         printf("%le\n", loss);
 
-        std::vector<std::tuple<double, int, int>> should_zero, should_one;
-
         for (int i = 0; i < N_GROUP; i++) {
             for (int j = 0; j < N_GROUP; j++) {
-                if (!(i < j)) {
-                    continue;
+                if (i < j) {
+                    double grad = C_back[i][j] + C_back[j][i];
+                    C[i][j] -= grad * lr;
+                    C[j][i] -= grad * lr;
+
+                    if (std::abs(C[j][i]) > 1e5 || std::isnan(C[j][i])) {
+                        printf("%d %d %le\n", i, j, C[i][j]);
+                    }
                 }
-
-                double grad = C_back[i][j] + C_back[j][i];
-                if (grad < 0 && C[i][j] == 0) {
-                    should_one.emplace_back(grad, i, j);
-                } else if (grad > 0 && C[i][j] == 1) {
-                    should_zero.emplace_back(-grad, i, j);
-                }
-            }
-        }
-
-        std::sort(should_zero.begin(), should_zero.end());
-        std::sort(should_one.begin(), should_one.end());
-
-        int swap_num =
-            std::min((int)std::min(should_zero.size(), should_one.size()), 1);
-        for (int s = 0; s < swap_num; s++) {
-            {
-                auto& [grad, i, j] = should_zero[s];
-                C[i][j] = C[j][i] = 0;
-            }
-            {
-                auto& [grad, i, j] = should_one[s];
-                C[i][j] = C[j][i] = 1;
             }
         }
     }

@@ -8,7 +8,7 @@ namespace sc21 {
 }
 
 // CとI_PROBを与えると誤差を返す関数。
-double simulator(double C[][N_GROUP], double I_PROB[]) {
+double simulator(int C[][N_GROUP], double I_PROB[]) {
     double S[sc21::T + 1][N_GROUP] = {0}, I[sc21::T + 1][N_GROUP] = {0},
                        R[sc21::T + 1][N_GROUP] = {0};
     for (int i = 0; i < N_GROUP; i++) {
@@ -46,7 +46,7 @@ void print(double x[N_GROUP]) {
     printf("\n");
 }
 
-void backprop(double C[][N_GROUP], double I_PROB[], double C_back[][N_GROUP]) {
+void backprop(int C[][N_GROUP], double I_PROB[], double C_back[][N_GROUP]) {
     double S[sc21::T + 1][N_GROUP] = {0}, I[sc21::T + 1][N_GROUP] = {0},
                        R[sc21::T + 1][N_GROUP] = {0};
     for (int i = 0; i < N_GROUP; i++) {

@@ -102,7 +102,7 @@ void sa(int C[][N_GROUP]){
         }
     }
 
-    double start_temp=100000,end_temp=0;
+    double start_temp=100,end_temp=0;
     double TIME_LIMIT=59.50;
 
     while(true){

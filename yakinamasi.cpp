@@ -103,7 +103,7 @@ void sa(int C[][N_GROUP]){
     }
 
     double start_temp=100000,end_temp=0;
-    double TIME_LIMIT=9.50;
+    double TIME_LIMIT=59.50;
 
     while(true){
         double now_t = getTime(start_cycle);
@@ -118,17 +118,22 @@ void sa(int C[][N_GROUP]){
         }
 
         //だんだん変更量を減少させるように
-        int change=1+10-10*(now_t)/TIME_LIMIT;
+        int change=1+30-30*(now_t)/TIME_LIMIT;
         
         modify(new_state,change);
 
         double new_score=simulator(new_state,sc21::I_PROB);
         double pre_score=simulator(C,sc21::I_PROB);
 
-        double temp=start_temp+(end_temp-start_temp)*(sc21::TIME0-start_cycle)/TIME_LIMIT;
-        double prob=exp((new_score-pre_score)/temp);
+        double temp=start_temp+(end_temp-start_temp)*(now_t)/TIME_LIMIT;
+        double prob=exp((pre_score-new_score)/temp);
 
-        if(prob>(xor128()%1280000)/1280000){
+        //std::cout<<pre_score<<" "<<new_score<<" "<<temp<<" "<<prob<<"\n";
+
+        long double p=xor128()%1280000;
+        p/=1280000;
+
+        if(prob>p){
             for(int i=0;i<N_GROUP;i++){
                 for(int j=0;j<N_GROUP;j++){
                     C[i][j]=new_state[i][j];
@@ -143,10 +148,10 @@ int main(){
 
     sa(sc21::C);
 
-    /*
-    提出時にはここを消せ！！！！！！！！！！！
-    std::cout<<simulator(sc21::C,sc21::I_PROB)<<"\n";
-    */
+    
+    //提出時にはここを消せ！！！！！！！！！！！
+    //std::cout<<simulator(sc21::C,sc21::I_PROB)<<"\n";
+    
 
     sc21::SC_output();
 }

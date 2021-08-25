@@ -19,11 +19,9 @@ unsigned int xor128() {
     return (w = (w ^ (w >> 19)) ^ (t ^ (t >> 8)));
 }
 
-const unsigned long long int cycle_per_sec = 2800000000;
-
 // CとI_PROBを与えると誤差を返す関数。
 double simulator(const int C[][N_GROUP], const double I_PROB[]) {
-    double S[2][N_GROUP] = {0}, I[2][N_GROUP] = {0};
+    double S[2][N_GROUP] = {}, I[2][N_GROUP] = {};
     // R[sc21::T + 1][N_GROUP] = {0};
     for (int i = 0; i < N_GROUP; i++) {
         S[0][i] = sc21::N[i];
@@ -109,17 +107,19 @@ void modify(int C[][N_GROUP], const int change) {
 }
 
 // 焼きなまし法
-double sa(int C[][N_GROUP],int s_temp) {
-    double min = 100000.0;
-    auto start_t = std::chrono::system_clock::now();
-    double TIME_LIMIT = 0.05;
+double sa(int C[][N_GROUP], double s_temp) {
+    // double min = 100000.0;
+    // auto start_t = std::chrono::system_clock::now();
+    // double TIME_LIMIT = 0.05;
     double pre_score = simulator(C, sc21::I_PROB);
-    int epoch = 1;
+    // int epoch = 1;
 
-    for (int _ = 0; _ < 10; _++) {
-        auto now_t = std::chrono::system_clock::now();
-        double e = std::chrono::duration_cast<std::chrono::seconds>(now_t-start_t).count();
-        if (e > TIME_LIMIT) break;
+    for (int _ = 0; _ < 100; _++) {
+        // auto now_t = std::chrono::system_clock::now();
+        // double e =
+        //     std::chrono::duration_cast<std::chrono::seconds>(now_t - start_t)
+        //         .count();
+        // if (e > TIME_LIMIT) break;
 
         int new_state[N_GROUP][N_GROUP];
 
@@ -130,34 +130,55 @@ double sa(int C[][N_GROUP],int s_temp) {
         }
 
         //だんだん変更量を減少させるように
-        int change = 1;
+        int change = 2;
 
         modify(new_state, change);
 
         double new_score = simulator(new_state, sc21::I_PROB);
-        min = std::min(min, new_score);
+        // min = std::min(min, new_score);
 
         double prob = exp((pre_score - new_score) / s_temp);
 
         // std::cout<<pre_score<<" "<<new_score<<" "<<temp<<" "<<prob<<"\n";
 
-        long double p = xor128() % 1280000;
+        double p = xor128() % 1280000;
         p /= 1280000;
 
-        if (prob > p * e / TIME_LIMIT) {
+        if (prob > p) {
             for (int i = 0; i < N_GROUP; i++) {
                 for (int j = 0; j < N_GROUP; j++) {
                     C[i][j] = new_state[i][j];
                 }
             }
+            // printf("%lf\n", new_score);
             pre_score = new_score;
         }
     }
-    printf("%lf\n",pre_score);
+    // printf("%lf\n", pre_score);
     return pre_score;
 }
 
-void initialize(int L[][N_GROUP][N_GROUP], int T[], int len) {
+void init_c(int C[][N_GROUP]) {
+    std::vector<std::pair<double, int>> v;
+
+    //初期化
+    for (int i = 0; i < N_GROUP; i++) {
+        //ここはsc21::I_PROB[i],iでもいいと思います
+        v.emplace_back(sc21::I_PROB[i] / sc21::N[i], i);
+        for (int j = 0; j < N_GROUP; j++) {
+            C[i][j] = 0;
+        }
+    }
+
+    std::sort(v.begin(), v.end());
+
+    for (int i = 0; i < N_GROUP - 1; i++) {
+        C[v[i].second][v[i + 1].second] = 1;
+        C[v[i + 1].second][v[i].second] = 1;
+    }
+}
+
+void initialize(int L[][N_GROUP][N_GROUP], double T[], int len) {
     double s[N_GROUP];
     memcpy(s, sc21::I_PROB, sizeof(sc21::I_PROB));
     std::sort(s, s + N_GROUP);
@@ -169,79 +190,62 @@ void initialize(int L[][N_GROUP][N_GROUP], int T[], int len) {
     //初期化
 
     for (int k = 0; k < len; k++) {
-        for (int i = 0; i < N_GROUP; i++) {
-            for (int j = 0; j < N_GROUP; j++) {
-                L[k][i][j] = 0;
-            }
-        }
-        for (int i = 0; i < N_GROUP; i++) {
-            L[k][i][(i + 1) % N_GROUP] = 1;
-            L[k][(i + 1) % N_GROUP][i] = 1;
-        }
-        int cnt = 0;
-        for (int i = 1; i < N_GROUP; i++) {
-            if (cnt + N_GROUP >= sc21::N_LINK) {
-                break;
-            }
-            if (s[i] < sum / (N_GROUP * 0.7) && L[k][0][i] == 0) {
-                cnt++;
-                L[k][0][i] = L[k][i][0] = 1;
-            }
-        }
-        for (int i = 0; i < sc21::N_LINK - N_GROUP - cnt; i++) {
-            while (true) {
-                int a = xor128() % N_GROUP, b = xor128() % N_GROUP;
-                if ((a < b) && L[k][a][b] == 0) {
-                    L[k][a][b] = 1;
-                    L[k][b][a] = 1;
-                    break;
-                }
-            }
-        }
+        init_c(L[k]);
     }
     std::cout << simulator(L[0], sc21::I_PROB) << "\n";
 
     for (int i = 0; i < len; i++) {
-        T[i] = i + 10;
+        T[i] = i * 1.5 + 0.001;
     }
 }
 
 int main() {
     sc21::SC_input();
 
-    const int k = 0.1;
-    const int eps = 1e-7;
+    const double k = 0.1;
+    const double eps = 1e-7;
 
     auto start_t = std::chrono::system_clock::now();
     double TIME_LIMIT = 90;
-    int L_num = 48;
+    const int L_num = 48;
     int L[L_num][N_GROUP][N_GROUP];
-    int tmp[L_num], score[L_num];
+    double tmp[L_num], score[L_num];
     initialize(L, tmp, L_num);
 
     while (true) {
-        for (int i = 0; i < L_num; i++)
-        {
-            if (i != L_num-1) printf("%d ",tmp[i]);
-            else printf("%d\n",tmp[i]);
-        }
-        
+        // for (int i = 0; i < L_num; i++) {
+        //     if (i != L_num - 1)
+        //         printf("%lf ", tmp[i]);
+        //     else
+        //         printf("%lf\n", tmp[i]);
+        // }
+
         auto now_t = std::chrono::system_clock::now();
         double e =
             std::chrono::duration_cast<std::chrono::seconds>(now_t - start_t)
                 .count();
         if (e > TIME_LIMIT) break;
+
+#pragma omp parallel for
         for (int i = 0; i < L_num; i++) {
-            score[i] = sa(L[i],tmp[i]);
+            score[i] = sa(L[i], tmp[i]);
         }
 
+        double min = score[0];
+        for (int i = 0; i < L_num; i++) {
+            min = std::min(min, score[i]);
+        }
+
+        printf("score: %lf\n", min);
+
         for (int i = 0; i < L_num - 1; i++) {
-            double p = std::min(1.0, std::exp(((double)score[i] - score[i + 1]) *
-                                              (1.0 / (k * tmp[i] + eps) -
-                                               1.0 / (k * tmp[i + 1] + eps))));
+            double p =
+                std::min(1.0, std::exp(((double)score[i] - score[i + 1]) *
+                                       (1.0 / (k * tmp[i] + eps) -
+                                        1.0 / (k * tmp[i + 1] + eps))));
             double q = (double)xor128() / INT32_MAX;
-            printf("exp: %d\n", tmp[i]);
-                printf("p: %le\n", p);
+            // printf("exp: %lf\n", tmp[i]);
+            // printf("p: %le\n", p);
             if (q > p) {
                 std::swap(tmp[i], tmp[i + 1]);
             }

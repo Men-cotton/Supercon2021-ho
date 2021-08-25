@@ -59,50 +59,38 @@ double simulator(const int C[][N_GROUP], const double I_PROB[]) {
 void modify(int C[][N_GROUP], const int change) {
     if (change <= 0) return;
 
-    // int one[sc21::N_LINK][2];
-    // int cnt = 0;
-    // for (int i = 0; i < N_GROUP; i++) {
-    //     for (int j = i + 1; j < N_GROUP; j++) {
-    //         if (C[i][j] == 1) {
-    //             one[cnt][0] = i;
-    //             one[cnt][1] = j;
-    //             cnt++;
-    //         }
-    //     }
-    // }
-
     for (int i = 0; i < change; i++) {
         int a, b;
         while (true) {
-            // int one_index = xor128() % sc21::N_LINK;
-            // a = one[one_index][0];
-            // b = one[one_index][1];
-
-            // if (a != -1) {
-            //     one[one_index][0] = -1;
-            //     break;
-            // }
             a = xor128() % N_GROUP;
             b = xor128() % N_GROUP;
 
-            if (a < b && C[a][b] == 1) {
+            if (a != b && C[a][b] == 1) {
                 break;
             }
         }
-
-        int c, d;
+        int c;
+        bool flag;
         while (true) {
             c = xor128() % N_GROUP;
-            d = xor128() % N_GROUP;
+            flag = xor128() % 2;
 
-            if (c < d && C[c][d] == 0) {
-                break;
+            if (c != a) {
+                if (flag) {
+                    if (C[c][a] == 0) {
+                        break;
+                    }
+                } else {
+                    if (C[a][c] == 0) {
+                        break;
+                    }
+                }
             }
         }
         C[a][b] = 0;
         C[b][a] = 0;
-        C[c][d] = 1;
-        C[d][c] = 1;
+        C[c][a] = 1;
+        C[a][c] = 1;
     }
 }
 
@@ -114,7 +102,9 @@ double sa(int C[][N_GROUP], double s_temp) {
     double pre_score = simulator(C, sc21::I_PROB);
     // int epoch = 1;
 
-    for (int _ = 0; _ < 100; _++) {
+    int change = 1 + (int)s_temp / 20;
+
+    for (int epoch = 0; epoch < 100; epoch++) {
         // auto now_t = std::chrono::system_clock::now();
         // double e =
         //     std::chrono::duration_cast<std::chrono::seconds>(now_t - start_t)
@@ -130,11 +120,11 @@ double sa(int C[][N_GROUP], double s_temp) {
         }
 
         //だんだん変更量を減少させるように
-        int change = 2;
 
         modify(new_state, change);
 
         double new_score = simulator(new_state, sc21::I_PROB);
+        // printf("%lf, %lf\n", pre_score, new_score);
         // min = std::min(min, new_score);
 
         double prob = exp((pre_score - new_score) / s_temp);
@@ -158,7 +148,7 @@ double sa(int C[][N_GROUP], double s_temp) {
     return pre_score;
 }
 
-void init_c(int C[][N_GROUP]) {
+void init_c(int C[][N_GROUP], double s[N_GROUP], double sum) {
     std::vector<std::pair<double, int>> v;
 
     //初期化
@@ -176,6 +166,29 @@ void init_c(int C[][N_GROUP]) {
         C[v[i].second][v[i + 1].second] = 1;
         C[v[i + 1].second][v[i].second] = 1;
     }
+
+    int cnt = 0;
+    for (int i = 1; i < N_GROUP; i++) {
+        if (cnt + N_GROUP >= sc21::N_LINK) {
+            break;
+        }
+        if (s[i] < sum / (N_GROUP * 0.7) && C[0][i] == 0) {
+            cnt++;
+            C[0][i] = C[i][0] = 1;
+        }
+    }
+    // std::cout << cnt << "\n";
+
+    for (int i = 0; i < sc21::N_LINK - (N_GROUP - 1) - cnt; i++) {
+        while (true) {
+            int a = xor128() % N_GROUP, b = xor128() % N_GROUP;
+            if ((a < b) && C[a][b] == 0) {
+                C[a][b] = 1;
+                C[b][a] = 1;
+                break;
+            }
+        }
+    }
 }
 
 void initialize(int L[][N_GROUP][N_GROUP], double T[], int len) {
@@ -190,12 +203,14 @@ void initialize(int L[][N_GROUP][N_GROUP], double T[], int len) {
     //初期化
 
     for (int k = 0; k < len; k++) {
-        init_c(L[k]);
+        init_c(L[k], s, sum);
     }
     std::cout << simulator(L[0], sc21::I_PROB) << "\n";
 
+    double start_temp = 0.01, end_temp = 10.0;
+
     for (int i = 0; i < len; i++) {
-        T[i] = i * 1.5 + 0.001;
+        T[i] = start_temp + (end_temp - start_temp) * (double)i / (double)len;
     }
 }
 

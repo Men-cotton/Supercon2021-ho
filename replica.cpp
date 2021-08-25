@@ -166,7 +166,11 @@ void init_c(int C[][N_GROUP], double s[N_GROUP], double sum) {
         C[v[i].second][v[i + 1].second] = 1;
         C[v[i + 1].second][v[i].second] = 1;
     }
+<<<<<<< HEAD
 
+=======
+    
+>>>>>>> 31e381d00531083893d7004d9cded9440863dfef
     int cnt = 0;
     for (int i = 1; i < N_GROUP; i++) {
         if (cnt + N_GROUP >= sc21::N_LINK) {
@@ -177,9 +181,15 @@ void init_c(int C[][N_GROUP], double s[N_GROUP], double sum) {
             C[0][i] = C[i][0] = 1;
         }
     }
+<<<<<<< HEAD
     // std::cout << cnt << "\n";
 
     for (int i = 0; i < sc21::N_LINK - (N_GROUP - 1) - cnt; i++) {
+=======
+    std::cout << cnt << "\n";
+
+    for (int i = 0; i < sc21::N_LINK - (N_GROUP-1) - cnt; i++) {
+>>>>>>> 31e381d00531083893d7004d9cded9440863dfef
         while (true) {
             int a = xor128() % N_GROUP, b = xor128() % N_GROUP;
             if ((a < b) && C[a][b] == 0) {

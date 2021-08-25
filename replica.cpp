@@ -176,6 +176,29 @@ void init_c(int C[][N_GROUP]) {
         C[v[i].second][v[i + 1].second] = 1;
         C[v[i + 1].second][v[i].second] = 1;
     }
+    
+    int cnt = 0;
+    for (int i = 1; i < N_GROUP; i++) {
+        if (cnt + N_GROUP >= sc21::N_LINK) {
+            break;
+        }
+        if (s[i] < sum / (N_GROUP * 0.7) && C[0][i] == 0) {
+            cnt++;
+            C[0][i] = C[i][0] = 1;
+        }
+    }
+    std::cout << cnt << "\n";
+
+    for (int i = 0; i < sc21::N_LINK - N_GROUP - cnt; i++) {
+        while (true) {
+            int a = xor128() % N_GROUP, b = xor128() % N_GROUP;
+            if ((a < b) && C[a][b] == 0) {
+                C[a][b] = 1;
+                C[b][a] = 1;
+                break;
+            }
+        }
+    }
 }
 
 void initialize(int L[][N_GROUP][N_GROUP], double T[], int len) {

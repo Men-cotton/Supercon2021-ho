@@ -20,8 +20,8 @@ unsigned int xor128() {
 }
 
 // CとI_PROBを与えると誤差を返す関数。
-double simulator(int C[][N_GROUP], double I_PROB[]) {
-    double S[sc21::T + 1][N_GROUP] = {0}, I[sc21::T + 1][N_GROUP] = {0};
+double simulator(const int C[][N_GROUP], const double I_PROB[]) {
+    double S[2][N_GROUP] = {0}, I[2][N_GROUP] = {0};
     // R[sc21::T + 1][N_GROUP] = {0};
     for (int i = 0; i < N_GROUP; i++) {
         S[0][i] = sc21::N[i];
@@ -30,22 +30,27 @@ double simulator(int C[][N_GROUP], double I_PROB[]) {
     I[0][0] = 1.0;
 
     for (int t = 0; t < sc21::T; t++) {
+        std::fill(S[1], S[1] + N_GROUP, 0.0);
+        std::fill(I[1], I[1] + N_GROUP, 0.0);
+
         for (int i = 0; i < N_GROUP; i++) {
             double sum = 0;
             for (int j = 0; j < N_GROUP; j++) {
-                sum += C[i][j] * I[t][j];
+                sum += C[i][j] * I[0][j];
             }
-            sum *= sc21::BETA2 * S[t][i];
-            S[t + 1][i] = S[t][i] - sc21::BETA * S[t][i] * I[t][i] - sum;
-            I[t + 1][i] = I[t][i] + sc21::BETA * S[t][i] * I[t][i] + sum -
-                          sc21::GAMMA * I[t][i];
+            sum *= sc21::BETA2 * S[0][i];
+            S[1][i] = S[0][i] - sc21::BETA * S[0][i] * I[0][i] - sum;
+            I[1][i] = I[0][i] + sc21::BETA * S[0][i] * I[0][i] + sum -
+                      sc21::GAMMA * I[0][i];
             // R[t + 1][i] = R[t][i] + sc21::GAMMA * I[t][i];
         }
+        std::swap(S[0], S[1]);
+        std::swap(I[0], I[1]);
     }
 
     double loss = 0.0;
     for (int i = 0; i < N_GROUP; i++) {
-        loss += (I[sc21::T][i] - I_PROB[i]) * (I[sc21::T][i] - I_PROB[i]);
+        loss += (I[0][i] - I_PROB[i]) * (I[0][i] - I_PROB[i]);
     }
 
     return loss;
@@ -53,36 +58,16 @@ double simulator(int C[][N_GROUP], double I_PROB[]) {
 
 void modify(int C[][N_GROUP], int change) {
     if (change <= 0) return;
-
-    int one[sc21::N_LINK][2];
-    int cnt = 0;
-    for (int i = 0; i < N_GROUP; i++) {
-        for (int j = i + 1; j < N_GROUP; j++) {
-            if (C[i][j] == 1) {
-                one[cnt][0] = i;
-                one[cnt][1] = j;
-                cnt++;
-            }
-        }
-    }
-
     for (int i = 0; i < change; i++) {
-        int one_index = xor128() % sc21::N_LINK;
-        int a = one[one_index][0], b = one[one_index][1];
-
-        int c, d;
-        while (true) {
-            c = xor128() % N_GROUP;
-            d = xor128() % N_GROUP;
-
-            if (c < d && C[c][d] == 0) {
-                break;
-            }
+        int a = xor128() % N_GROUP, b = xor128() % N_GROUP,
+            c = xor128() % N_GROUP, d = xor128() % N_GROUP;
+        if (a < b && c < d && C[a][b] == 1 && C[c][d] == 0) {
+            C[a][b] = 0;
+            C[b][a] = 0;
+            C[c][d] = 1;
+            C[d][c] = 1;
+            break;
         }
-        C[a][b] = 0;
-        C[b][a] = 0;
-        C[c][d] = 1;
-        C[d][c] = 1;
     }
 }
 

@@ -21,7 +21,7 @@ unsigned int xor128() {
 
 // CとI_PROBを与えると誤差を返す関数。
 double simulator_bool(const bool C[][N_GROUP], const double I_PROB[],
-                      double LOSS[], bool abs=true) {
+                      double LOSS[], bool abs=false) {
     double S[2][N_GROUP] = {}, I[2][N_GROUP] = {}, SUM[N_GROUP];
     // R[sc21::T + 1][N_GROUP] = {0};
     for (int i = 0; i < N_GROUP; i++) {
@@ -415,7 +415,7 @@ int main() {
 
 #pragma omp parallel for
         for (int i = 0; i < L_num; i++) {
-            score[i] = sa(L[i], tmp[i] * temp_scale * temp_scale, BEST[i], best_score[i], abs);
+            score[i] = sa(L[i], tmp[i] * temp_scale, BEST[i], best_score[i], abs);
         }
 
         min = best_score[0];

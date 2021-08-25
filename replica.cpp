@@ -270,7 +270,7 @@ void initialize(bool L[][N_GROUP][N_GROUP], double T[], int len) {
     }
     std::cout << simulator(L[0], sc21::I_PROB) << "\n";
 
-    double start_temp = 0.01, end_temp = 15.0;
+    double start_temp = 0.01, end_temp = 10.0;
 
     for (int i = 0; i < len; i++) {
         T[i] = start_temp + (end_temp - start_temp) * (double)i / (double)len;
@@ -285,7 +285,7 @@ int main() {
 
     auto start_t = std::chrono::system_clock::now();
     double TIME_LIMIT = 90;
-    const int L_num = 96;
+    const int L_num = 48;
     bool L[L_num][N_GROUP][N_GROUP];
     bool BEST[L_num][N_GROUP][N_GROUP] = {};
     double tmp[L_num], score[L_num];
@@ -328,16 +328,18 @@ int main() {
 
         printf("score: %lf\n", min);
 
-        for (int i = 0; i < L_num - 1; i++) {
-            double p =
-                std::min(1.0, std::exp(((double)score[i] - score[i + 1]) *
-                                       (1.0 / (k * tmp[i] + eps) -
-                                        1.0 / (k * tmp[i + 1] + eps))));
-            double q = (double)xor128() / INT32_MAX;
-            // printf("exp: %lf\n", tmp[i]);
-            // printf("p: %le\n", p);
-            if (q > p) {
-                std::swap(tmp[i], tmp[i + 1]);
+        for (int ii = 0; ii < 10; ii++) {
+            for (int i = 0; i < L_num - 1; i++) {
+                double p =
+                    std::min(1.0, std::exp(((double)score[i] - score[i + 1]) *
+                                           (1.0 / (k * tmp[i] + eps) -
+                                            1.0 / (k * tmp[i + 1] + eps))));
+                double q = (double)xor128() / INT32_MAX;
+                // printf("exp: %lf\n", tmp[i]);
+                // printf("p: %le\n", p);
+                if (q > p) {
+                    std::swap(tmp[i], tmp[i + 1]);
+                }
             }
         }
     }

@@ -8,7 +8,7 @@ namespace sc21 {
 #include "sc21.h"
 }
 
-unsigned int xor128() {
+inline unsigned int xor128() {
     static unsigned int x = 123456789, y = 362436069, z = 521288629,
                         w = 88675123;
     unsigned int t;
@@ -19,9 +19,14 @@ unsigned int xor128() {
     return (w = (w ^ (w >> 19)) ^ (t ^ (t >> 8)));
 }
 
+inline double zero_one_random() {
+    constexpr unsigned int mod = 1 << 20;
+    return (double)(xor128() & (mod - 1)) / mod;
+}
+
 // CとI_PROBを与えると誤差を返す関数。
 double simulator_bool(const bool C[][N_GROUP], const double I_PROB[],
-                      double LOSS[], bool abs=false) {
+                      double LOSS[], bool abs = false) {
     double S[2][N_GROUP] = {}, I[2][N_GROUP] = {}, SUM[N_GROUP];
     // R[sc21::T + 1][N_GROUP] = {0};
     for (int i = 0; i < N_GROUP; i++) {
@@ -65,13 +70,13 @@ double simulator_bool(const bool C[][N_GROUP], const double I_PROB[],
     }
 
     double loss = 0.0;
-    if (abs){
+    if (abs) {
         for (int i = 0; i < N_GROUP; i++) {
             double l = std::abs(I[0][i] - I_PROB[i]);
             LOSS[i] = l;
             loss += l;
         }
-    }else{
+    } else {
         for (int i = 0; i < N_GROUP; i++) {
             double l = std::abs(I[0][i] - I_PROB[i]);
             LOSS[i] = l;
@@ -164,7 +169,7 @@ double simulator(const int C[][N_GROUP], const double I_PROB[]) {
     return loss;
 }
 
-double loss_sum(bool C[][N_GROUP], double loss[N_GROUP]) {
+inline double loss_sum(bool C[][N_GROUP], double loss[N_GROUP]) {
     double sum = 0.0;
     for (int i = 0; i < N_GROUP; i++) {
         sum += loss[i];
@@ -173,7 +178,7 @@ double loss_sum(bool C[][N_GROUP], double loss[N_GROUP]) {
 }
 
 int weight_sample(double weight[N_GROUP], double sum) {
-    double s = double(xor128() % 12800000) / 12800000 * sum;
+    double s = zero_one_random() * sum;
     for (int i = 0; i < N_GROUP; i++) {
         if (s < weight[i]) {
             return i;
@@ -221,7 +226,6 @@ void modify(bool C[][N_GROUP], const int change, double loss[N_GROUP],
     }
 }
 
-
 // 焼きなまし法
 double sa(bool C[][N_GROUP], double s_temp, bool best[][N_GROUP],
           double &min_score, bool abs) {
@@ -255,7 +259,8 @@ double sa(bool C[][N_GROUP], double s_temp, bool best[][N_GROUP],
 
         modify(new_state, change, pre_loss, pre_sample_sum);
 
-        double new_score = simulator_bool(new_state, sc21::I_PROB, new_loss, abs);
+        double new_score =
+            simulator_bool(new_state, sc21::I_PROB, new_loss, abs);
         // printf("%lf, %lf\n", pre_score, new_score);
         // min = std::min(min, new_score);
 
@@ -263,8 +268,7 @@ double sa(bool C[][N_GROUP], double s_temp, bool best[][N_GROUP],
 
         // std::cout<<pre_score<<" "<<new_score<<" "<<temp<<" "<<prob<<"\n";
 
-        double p = xor128() % 1280000;
-        p /= 1280000;
+        double p = zero_one_random();
 
         if (prob > p) {
             for (int i = 0; i < N_GROUP; i++) {
@@ -415,7 +419,8 @@ int main() {
 
 #pragma omp parallel for
         for (int i = 0; i < L_num; i++) {
-            score[i] = sa(L[i], tmp[i] * temp_scale, BEST[i], best_score[i], abs);
+            score[i] =
+                sa(L[i], tmp[i] * temp_scale, BEST[i], best_score[i], abs);
         }
 
         min = best_score[0];

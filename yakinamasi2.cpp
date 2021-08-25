@@ -53,16 +53,36 @@ double simulator(int C[][N_GROUP], double I_PROB[]) {
 
 void modify(int C[][N_GROUP], int change) {
     if (change <= 0) return;
-    for (int i = 0; i < change; i++) {
-        int a = xor128() % N_GROUP, b = xor128() % N_GROUP,
-            c = xor128() % N_GROUP, d = xor128() % N_GROUP;
-        if (a < b && c < d && C[a][b] == 1 && C[c][d] == 0) {
-            C[a][b] = 0;
-            C[b][a] = 0;
-            C[c][d] = 1;
-            C[d][c] = 1;
-            break;
+
+    int one[sc21::N_LINK][2];
+    int cnt = 0;
+    for (int i = 0; i < N_GROUP; i++) {
+        for (int j = i + 1; j < N_GROUP; j++) {
+            if (C[i][j] == 1) {
+                one[cnt][0] = i;
+                one[cnt][1] = j;
+                cnt++;
+            }
         }
+    }
+
+    for (int i = 0; i < change; i++) {
+        int one_index = xor128() % sc21::N_LINK;
+        int a = one[one_index][0], b = one[one_index][1];
+
+        int c, d;
+        while (true) {
+            c = xor128() % N_GROUP;
+            d = xor128() % N_GROUP;
+
+            if (c < d && C[c][d] == 0) {
+                break;
+            }
+        }
+        C[a][b] = 0;
+        C[b][a] = 0;
+        C[c][d] = 1;
+        C[d][c] = 1;
     }
 }
 

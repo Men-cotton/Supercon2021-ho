@@ -20,7 +20,70 @@ unsigned int xor128() {
 }
 
 // CとI_PROBを与えると誤差を返す関数。
-double simulator(const bool C[][N_GROUP], const double I_PROB[]) {
+double simulator_bool(const bool C[][N_GROUP], const double I_PROB[],
+                      double LOSS[]) {
+    double S[2][N_GROUP] = {}, I[2][N_GROUP] = {}, SUM[N_GROUP];
+    // R[sc21::T + 1][N_GROUP] = {0};
+    for (int i = 0; i < N_GROUP; i++) {
+        S[0][i] = sc21::N[i];
+    }
+    S[0][0] -= 1.0;
+    I[0][0] = 1.0;
+
+    int C_LIST[sc21::N_LINK][2];
+    int cnt = 0;
+    for (int i = 0; i < N_GROUP; i++) {
+        for (int j = i + 1; j < N_GROUP; j++) {
+            if (C[i][j]) {
+                C_LIST[cnt][0] = i;
+                C_LIST[cnt][1] = j;
+                cnt++;
+            }
+        }
+    }
+
+    for (int t = 0; t < sc21::T; t++) {
+        std::fill(S[1], S[1] + N_GROUP, 0.0);
+        std::fill(I[1], I[1] + N_GROUP, 0.0);
+        std::fill(SUM, SUM + N_GROUP, 0.0);
+
+        for (int i = 0; i < sc21::N_LINK; i++) {
+            auto &[x, y] = C_LIST[i];
+            SUM[x] += I[0][y];
+            SUM[y] += I[0][x];
+        }
+
+        for (int i = 0; i < N_GROUP; i++) {
+            double sum = SUM[i] * sc21::BETA2 * S[0][i];
+            S[1][i] = S[0][i] - sc21::BETA * S[0][i] * I[0][i] - sum;
+            I[1][i] = I[0][i] + sc21::BETA * S[0][i] * I[0][i] + sum -
+                      sc21::GAMMA * I[0][i];
+            // R[t + 1][i] = R[t][i] + sc21::GAMMA * I[t][i];
+        }
+        std::swap(S[0], S[1]);
+        std::swap(I[0], I[1]);
+    }
+
+    double loss = 0.0;
+    for (int i = 0; i < N_GROUP; i++) {
+        double l = std::abs(I[0][i] - I_PROB[i]);
+        LOSS[i] = l * l;
+        loss += l;
+    }
+
+    for (int i = 0; i < N_GROUP; i++) {
+        int cnt = 1;
+        for (int j = 0; j < N_GROUP; j++) {
+            cnt += C[i][j];
+        }
+        LOSS[i] *= cnt;
+    }
+
+    return loss;
+}
+
+// CとI_PROBを与えると誤差を返す関数。
+double simulator_bool(const bool C[][N_GROUP], const double I_PROB[]) {
     double S[2][N_GROUP] = {}, I[2][N_GROUP] = {}, SUM[N_GROUP];
     // R[sc21::T + 1][N_GROUP] = {0};
     for (int i = 0; i < N_GROUP; i++) {
@@ -108,14 +171,33 @@ double simulator(const int C[][N_GROUP], const double I_PROB[]) {
     return loss;
 }
 
-void modify(bool C[][N_GROUP], const int change) {
+double loss_sum(bool C[][N_GROUP], double loss[N_GROUP]) {
+    double sum = 0.0;
+    for (int i = 0; i < N_GROUP; i++) {
+        sum += loss[i];
+    }
+    return sum;
+}
+
+int weight_sample(double weight[N_GROUP], double sum) {
+    double s = double(xor128() % 12800000) / 12800000 * sum;
+    for (int i = 0; i < N_GROUP; i++) {
+        if (s < weight[i]) {
+            return i;
+        }
+        s -= weight[i];
+    }
+}
+
+void modify(bool C[][N_GROUP], const int change, double loss[N_GROUP],
+            double loss_sum) {
     if (change <= 0) return;
 
     for (int i = 0; i < change; i++) {
         int a, b;
         while (true) {
             a = xor128() % N_GROUP;
-            b = xor128() % N_GROUP;
+            b = weight_sample(loss, loss_sum);
 
             if (a != b && C[a][b] == 1) {
                 break;
@@ -124,7 +206,7 @@ void modify(bool C[][N_GROUP], const int change) {
         int c;
         bool flag;
         while (true) {
-            c = xor128() % N_GROUP;
+            c = weight_sample(loss, loss_sum);
             flag = xor128() % 2;
 
             if (c != a) {
@@ -146,13 +228,17 @@ void modify(bool C[][N_GROUP], const int change) {
     }
 }
 
+
 // 焼きなまし法
 double sa(bool C[][N_GROUP], double s_temp, bool best[][N_GROUP],
           double &min_score) {
     // double min = 100000.0;
     // auto start_t = std::chrono::system_clock::now();
     // double TIME_LIMIT = 0.05;
-    double pre_score = simulator(C, sc21::I_PROB);
+    double pre_loss[N_GROUP], new_loss[N_GROUP];
+    double pre_score = simulator_bool(C, sc21::I_PROB, pre_loss);
+    double pre_sample_sum = loss_sum(C, pre_loss);
+
     // int epoch = 1;
 
     int change = 1 + (int)s_temp / 20;
@@ -174,9 +260,9 @@ double sa(bool C[][N_GROUP], double s_temp, bool best[][N_GROUP],
 
         //だんだん変更量を減少させるように
 
-        modify(new_state, change);
+        modify(new_state, change, pre_loss, pre_sample_sum);
 
-        double new_score = simulator(new_state, sc21::I_PROB);
+        double new_score = simulator_bool(new_state, sc21::I_PROB, new_loss);
         // printf("%lf, %lf\n", pre_score, new_score);
         // min = std::min(min, new_score);
 
@@ -195,6 +281,11 @@ double sa(bool C[][N_GROUP], double s_temp, bool best[][N_GROUP],
             }
             // printf("%lf\n", new_score);
             pre_score = new_score;
+
+            for (int i = 0; i < N_GROUP; i++) {
+                pre_loss[i] = new_loss[i];
+            }
+            pre_sample_sum = loss_sum(C, pre_loss);
 
             if (min_score > pre_score) {
                 min_score = pre_score;
@@ -268,7 +359,7 @@ void initialize(bool L[][N_GROUP][N_GROUP], double T[], int len) {
     for (int k = 0; k < len; k++) {
         init_c(L[k], s, sum);
     }
-    std::cout << simulator(L[0], sc21::I_PROB) << "\n";
+    std::cout << simulator_bool(L[0], sc21::I_PROB) << "\n";
 
     double start_temp = 0.01, end_temp = 15.0;
 
@@ -280,11 +371,11 @@ void initialize(bool L[][N_GROUP][N_GROUP], double T[], int len) {
 int main() {
     sc21::SC_input();
 
-    const double k = 0.1;
+    const double k = 3.0;
     const double eps = 1e-7;
 
     auto start_t = std::chrono::system_clock::now();
-    double TIME_LIMIT = 90;
+    double TIME_LIMIT = 300;
     const int L_num = 48;
     bool L[L_num][N_GROUP][N_GROUP];
     bool BEST[L_num][N_GROUP][N_GROUP] = {};

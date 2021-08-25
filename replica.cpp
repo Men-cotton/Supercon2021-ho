@@ -270,7 +270,7 @@ void initialize(bool L[][N_GROUP][N_GROUP], double T[], int len) {
     }
     std::cout << simulator(L[0], sc21::I_PROB) << "\n";
 
-    double start_temp = 0.01, end_temp = 10.0;
+    double start_temp = 0.01, end_temp = 15.0;
 
     for (int i = 0; i < len; i++) {
         T[i] = start_temp + (end_temp - start_temp) * (double)i / (double)len;
@@ -302,9 +302,10 @@ int main() {
         // }
 
         auto now_t = std::chrono::system_clock::now();
-        double e =
-            std::chrono::duration_cast<std::chrono::seconds>(now_t - start_t)
-                .count();
+        double e = std::chrono::duration_cast<std::chrono::milliseconds>(
+                       now_t - start_t)
+                       .count() /
+                   1000.0;
         if (e > TIME_LIMIT) break;
 
         double min = best_score[0];
@@ -316,9 +317,12 @@ int main() {
             best_score[i] = std::min(best_score[i], min + 0.01);
         }
 
+        double temp_scale = (1 - e / TIME_LIMIT);
+        // printf("%lf\n", temp_scale);
+
 #pragma omp parallel for
         for (int i = 0; i < L_num; i++) {
-            score[i] = sa(L[i], tmp[i], BEST[i], best_score[i]);
+            score[i] = sa(L[i], tmp[i] * temp_scale, BEST[i], best_score[i]);
         }
 
         min = best_score[0];
@@ -328,7 +332,7 @@ int main() {
 
         printf("score: %lf\n", min);
 
-        for (int ii = 0; ii < 10; ii++) {
+        for (int ii = 0; ii < 5; ii++) {
             for (int i = 0; i < L_num - 1; i++) {
                 double p =
                     std::min(1.0, std::exp(((double)score[i] - score[i + 1]) *

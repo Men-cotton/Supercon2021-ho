@@ -109,15 +109,14 @@ void modify(int C[][N_GROUP], const int change) {
 }
 
 // 焼きなまし法
-double sa(int C[][N_GROUP]) {
+double sa(int C[][N_GROUP],int s_temp) {
     double min = 100000.0;
     auto start_t = std::chrono::system_clock::now();
-    double TIME_LIMIT = 0.5;
-    double start_temp = 100, end_temp = 0;
+    double TIME_LIMIT = 0.05;
     double pre_score = simulator(C, sc21::I_PROB);
     int epoch = 1;
 
-    while (true) {
+    for (int _ = 0; _ < 10; _++) {
         auto now_t = std::chrono::system_clock::now();
         double e = std::chrono::duration_cast<std::chrono::seconds>(now_t-start_t).count();
         if (e > TIME_LIMIT) break;
@@ -138,9 +137,7 @@ double sa(int C[][N_GROUP]) {
         double new_score = simulator(new_state, sc21::I_PROB);
         min = std::min(min, new_score);
 
-        double temp =
-            start_temp + (end_temp - start_temp) * e / TIME_LIMIT;
-        double prob = exp((pre_score - new_score) / temp);
+        double prob = exp((pre_score - new_score) / s_temp);
 
         // std::cout<<pre_score<<" "<<new_score<<" "<<temp<<" "<<prob<<"\n";
 
@@ -202,16 +199,17 @@ void initialize(int L[][N_GROUP][N_GROUP], int T[], int len) {
             }
         }
     }
+    std::cout << simulator(L[0], sc21::I_PROB) << "\n";
 
     for (int i = 0; i < len; i++) {
-        T[i] = i * 10 + 10;
+        T[i] = i + 10;
     }
 }
 
 int main() {
     sc21::SC_input();
 
-    const int k = 10;
+    const int k = 0.1;
     const int eps = 1e-7;
 
     auto start_t = std::chrono::system_clock::now();
@@ -228,7 +226,7 @@ int main() {
                 .count();
         if (e > TIME_LIMIT) break;
         for (int i = 0; i < L_num; i++) {
-            score[i] = sa(L[i]);
+            score[i] = sa(L[i],tmp[i]);
         }
 
         for (int i = 0; i < L_num - 1; i++) {
@@ -236,6 +234,7 @@ int main() {
                                               (1 / (k * tmp[i] + eps) -
                                                1 / (k * tmp[i + 1] + eps))));
             double q = (double)xor128() / INT32_MAX;
+            printf("p: %le\n",p);
             if (q > p) {
                 std::swap(tmp[i], tmp[i + 1]);
             }

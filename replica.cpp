@@ -220,6 +220,12 @@ int main() {
     initialize(L, tmp, L_num);
 
     while (true) {
+        for (int i = 0; i < L_num; i++)
+        {
+            if (i != L_num-1) printf("%d ",tmp[i]);
+            else printf("%d\n",tmp[i]);
+        }
+        
         auto now_t = std::chrono::system_clock::now();
         double e =
             std::chrono::duration_cast<std::chrono::seconds>(now_t - start_t)
@@ -230,11 +236,12 @@ int main() {
         }
 
         for (int i = 0; i < L_num - 1; i++) {
-            double p = std::min(1.0, std::exp((score[i] - score[i + 1]) *
-                                              (1 / (k * tmp[i] + eps) -
-                                               1 / (k * tmp[i + 1] + eps))));
+            double p = std::min(1.0, std::exp(((double)score[i] - score[i + 1]) *
+                                              (1.0 / (k * tmp[i] + eps) -
+                                               1.0 / (k * tmp[i + 1] + eps))));
             double q = (double)xor128() / INT32_MAX;
-            printf("p: %le\n",p);
+            printf("exp: %d\n", tmp[i]);
+                printf("p: %le\n", p);
             if (q > p) {
                 std::swap(tmp[i], tmp[i + 1]);
             }

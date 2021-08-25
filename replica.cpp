@@ -21,7 +21,7 @@ unsigned int xor128() {
 
 // CとI_PROBを与えると誤差を返す関数。
 double simulator_bool(const bool C[][N_GROUP], const double I_PROB[],
-                      double LOSS[]) {
+                      double LOSS[], bool abs=true) {
     double S[2][N_GROUP] = {}, I[2][N_GROUP] = {}, SUM[N_GROUP];
     // R[sc21::T + 1][N_GROUP] = {0};
     for (int i = 0; i < N_GROUP; i++) {
@@ -65,10 +65,18 @@ double simulator_bool(const bool C[][N_GROUP], const double I_PROB[],
     }
 
     double loss = 0.0;
-    for (int i = 0; i < N_GROUP; i++) {
-        double l = std::abs(I[0][i] - I_PROB[i]);
-        LOSS[i] = l;
-        loss += l;
+    if (abs){
+        for (int i = 0; i < N_GROUP; i++) {
+            double l = std::abs(I[0][i] - I_PROB[i]);
+            LOSS[i] = l;
+            loss += l;
+        }
+    }else{
+        for (int i = 0; i < N_GROUP; i++) {
+            double l = std::abs(I[0][i] - I_PROB[i]);
+            LOSS[i] = l;
+            loss += l * l;
+        }
     }
 
     for (int i = 0; i < N_GROUP; i++) {
@@ -82,6 +90,42 @@ double simulator_bool(const bool C[][N_GROUP], const double I_PROB[],
     return loss;
 }
 
+// CとI_PROBを与えると誤差を返す関数。
+double simulator_bool(const bool C[][N_GROUP], const double I_PROB[]) {
+    double S[2][N_GROUP] = {}, I[2][N_GROUP] = {};
+    // R[sc21::T + 1][N_GROUP] = {0};
+    for (int i = 0; i < N_GROUP; i++) {
+        S[0][i] = sc21::N[i];
+    }
+    S[0][0] -= 1.0;
+    I[0][0] = 1.0;
+
+    for (int t = 0; t < sc21::T; t++) {
+        std::fill(S[1], S[1] + N_GROUP, 0.0);
+        std::fill(I[1], I[1] + N_GROUP, 0.0);
+
+        for (int i = 0; i < N_GROUP; i++) {
+            double sum = 0;
+            for (int j = 0; j < N_GROUP; j++) {
+                sum += C[i][j] * I[0][j];
+            }
+            sum *= sc21::BETA2 * S[0][i];
+            S[1][i] = S[0][i] - sc21::BETA * S[0][i] * I[0][i] - sum;
+            I[1][i] = I[0][i] + sc21::BETA * S[0][i] * I[0][i] + sum -
+                      sc21::GAMMA * I[0][i];
+            // R[t + 1][i] = R[t][i] + sc21::GAMMA * I[t][i];
+        }
+        std::swap(S[0], S[1]);
+        std::swap(I[0], I[1]);
+    }
+
+    double loss = 0.0;
+    for (int i = 0; i < N_GROUP; i++) {
+        loss += (I[0][i] - I_PROB[i]) * (I[0][i] - I_PROB[i]);
+    }
+
+    return loss;
+}
 
 // CとI_PROBを与えると誤差を返す関数。
 double simulator(const int C[][N_GROUP], const double I_PROB[]) {
@@ -180,12 +224,12 @@ void modify(bool C[][N_GROUP], const int change, double loss[N_GROUP],
 
 // 焼きなまし法
 double sa(bool C[][N_GROUP], double s_temp, bool best[][N_GROUP],
-          double &min_score) {
+          double &min_score, bool abs) {
     // double min = 100000.0;
     // auto start_t = std::chrono::system_clock::now();
     // double TIME_LIMIT = 0.05;
     double pre_loss[N_GROUP], new_loss[N_GROUP];
-    double pre_score = simulator_bool(C, sc21::I_PROB, pre_loss);
+    double pre_score = simulator_bool(C, sc21::I_PROB, pre_loss, abs);
     double pre_sample_sum = loss_sum(C, pre_loss);
 
     // int epoch = 1;
@@ -211,7 +255,7 @@ double sa(bool C[][N_GROUP], double s_temp, bool best[][N_GROUP],
 
         modify(new_state, change, pre_loss, pre_sample_sum);
 
-        double new_score = simulator_bool(new_state, sc21::I_PROB, new_loss);
+        double new_score = simulator_bool(new_state, sc21::I_PROB, new_loss, abs);
         // printf("%lf, %lf\n", pre_score, new_score);
         // min = std::min(min, new_score);
 
@@ -333,6 +377,8 @@ int main() {
     initialize(L, tmp, L_num);
     std::fill(best_score, best_score + L_num, 1e9);
 
+    bool pre_abs = true;
+
     while (true) {
         // for (int i = 0; i < L_num; i++) {
         //     if (i != L_num - 1)
@@ -357,12 +403,19 @@ int main() {
             best_score[i] = std::min(best_score[i], min + 0.01);
         }
 
-        double temp_scale = (1 - e / TIME_LIMIT);
+        double temp_scale = (1 - std::min(e / TIME_LIMIT * 1.03, 0.99999));
         // printf("%lf\n", temp_scale);
+
+        bool abs = e / TIME_LIMIT < 0.9;
+
+        if (pre_abs != abs) {
+            std::fill(best_score, best_score + L_num, 1e9);
+        }
+        pre_abs = abs;
 
 #pragma omp parallel for
         for (int i = 0; i < L_num; i++) {
-            score[i] = sa(L[i], tmp[i] * temp_scale, BEST[i], best_score[i]);
+            score[i] = sa(L[i], tmp[i] * temp_scale * temp_scale, BEST[i], best_score[i], abs);
         }
 
         min = best_score[0];

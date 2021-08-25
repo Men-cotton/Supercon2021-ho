@@ -20,6 +20,43 @@ unsigned int xor128() {
 }
 
 // CとI_PROBを与えると誤差を返す関数。
+double simulator(const bool C[][N_GROUP], const double I_PROB[]) {
+    double S[2][N_GROUP] = {}, I[2][N_GROUP] = {};
+    // R[sc21::T + 1][N_GROUP] = {0};
+    for (int i = 0; i < N_GROUP; i++) {
+        S[0][i] = sc21::N[i];
+    }
+    S[0][0] -= 1.0;
+    I[0][0] = 1.0;
+
+    for (int t = 0; t < sc21::T; t++) {
+        std::fill(S[1], S[1] + N_GROUP, 0.0);
+        std::fill(I[1], I[1] + N_GROUP, 0.0);
+
+        for (int i = 0; i < N_GROUP; i++) {
+            double sum = 0;
+            for (int j = 0; j < N_GROUP; j++) {
+                sum += C[i][j] * I[0][j];
+            }
+            sum *= sc21::BETA2 * S[0][i];
+            S[1][i] = S[0][i] - sc21::BETA * S[0][i] * I[0][i] - sum;
+            I[1][i] = I[0][i] + sc21::BETA * S[0][i] * I[0][i] + sum -
+                      sc21::GAMMA * I[0][i];
+            // R[t + 1][i] = R[t][i] + sc21::GAMMA * I[t][i];
+        }
+        std::swap(S[0], S[1]);
+        std::swap(I[0], I[1]);
+    }
+
+    double loss = 0.0;
+    for (int i = 0; i < N_GROUP; i++) {
+        loss += (I[0][i] - I_PROB[i]) * (I[0][i] - I_PROB[i]);
+    }
+
+    return loss;
+}
+
+// CとI_PROBを与えると誤差を返す関数。
 double simulator(const int C[][N_GROUP], const double I_PROB[]) {
     double S[2][N_GROUP] = {}, I[2][N_GROUP] = {};
     // R[sc21::T + 1][N_GROUP] = {0};
@@ -56,7 +93,7 @@ double simulator(const int C[][N_GROUP], const double I_PROB[]) {
     return loss;
 }
 
-void modify(int C[][N_GROUP], const int change) {
+void modify(bool C[][N_GROUP], const int change) {
     if (change <= 0) return;
 
     for (int i = 0; i < change; i++) {
@@ -95,7 +132,7 @@ void modify(int C[][N_GROUP], const int change) {
 }
 
 // 焼きなまし法
-double sa(int C[][N_GROUP], double s_temp, int best[][N_GROUP],
+double sa(bool C[][N_GROUP], double s_temp, bool best[][N_GROUP],
           double &min_score) {
     // double min = 100000.0;
     // auto start_t = std::chrono::system_clock::now();
@@ -112,7 +149,7 @@ double sa(int C[][N_GROUP], double s_temp, int best[][N_GROUP],
         //         .count();
         // if (e > TIME_LIMIT) break;
 
-        int new_state[N_GROUP][N_GROUP];
+        bool new_state[N_GROUP][N_GROUP];
 
         for (int i = 0; i < N_GROUP; i++) {
             for (int j = 0; j < N_GROUP; j++) {
@@ -159,7 +196,7 @@ double sa(int C[][N_GROUP], double s_temp, int best[][N_GROUP],
     return pre_score;
 }
 
-void init_c(int C[][N_GROUP], double s[N_GROUP], double sum) {
+void init_c(bool C[][N_GROUP], double s[N_GROUP], double sum) {
     std::vector<std::pair<double, int>> v;
 
     //初期化
@@ -202,7 +239,7 @@ void init_c(int C[][N_GROUP], double s[N_GROUP], double sum) {
     }
 }
 
-void initialize(int L[][N_GROUP][N_GROUP], double T[], int len) {
+void initialize(bool L[][N_GROUP][N_GROUP], double T[], int len) {
     double s[N_GROUP];
     memcpy(s, sc21::I_PROB, sizeof(sc21::I_PROB));
     std::sort(s, s + N_GROUP);
@@ -234,8 +271,8 @@ int main() {
     auto start_t = std::chrono::system_clock::now();
     double TIME_LIMIT = 90;
     const int L_num = 48;
-    int L[L_num][N_GROUP][N_GROUP];
-    int BEST[L_num][N_GROUP][N_GROUP] = {};
+    bool L[L_num][N_GROUP][N_GROUP];
+    bool BEST[L_num][N_GROUP][N_GROUP] = {};
     double tmp[L_num], score[L_num];
     double best_score[L_num];
     initialize(L, tmp, L_num);

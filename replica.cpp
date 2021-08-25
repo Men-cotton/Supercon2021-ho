@@ -25,7 +25,7 @@ inline double zero_one_random() {
 }
 
 // CとI_PROBを与えると誤差を返す関数。
-double simulator_bool(const bool C[][N_GROUP], const double I_PROB[],
+double simulator_bool_sa(const bool C[][N_GROUP], const double I_PROB[],
                       double LOSS[], bool abs = false) {
     double S[2][N_GROUP] = {}, I[2][N_GROUP] = {}, SUM[N_GROUP];
     // R[sc21::T + 1][N_GROUP] = {0};
@@ -233,7 +233,7 @@ double sa(bool C[][N_GROUP], double s_temp, bool best[][N_GROUP],
     // auto start_t = std::chrono::system_clock::now();
     // double TIME_LIMIT = 0.05;
     double pre_loss[N_GROUP], new_loss[N_GROUP];
-    double pre_score = simulator_bool(C, sc21::I_PROB, pre_loss, abs);
+    double pre_score = simulator_bool_sa(C, sc21::I_PROB, pre_loss, abs);
     double pre_sample_sum = loss_sum(C, pre_loss);
 
     // int epoch = 1;
@@ -260,7 +260,7 @@ double sa(bool C[][N_GROUP], double s_temp, bool best[][N_GROUP],
         modify(new_state, change, pre_loss, pre_sample_sum);
 
         double new_score =
-            simulator_bool(new_state, sc21::I_PROB, new_loss, abs);
+            simulator_bool_sa(new_state, sc21::I_PROB, new_loss, abs);
         // printf("%lf, %lf\n", pre_score, new_score);
         // min = std::min(min, new_score);
 

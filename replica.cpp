@@ -67,7 +67,7 @@ double simulator_bool(const bool C[][N_GROUP], const double I_PROB[],
     double loss = 0.0;
     for (int i = 0; i < N_GROUP; i++) {
         double l = std::abs(I[0][i] - I_PROB[i]);
-        LOSS[i] = l * l;
+        LOSS[i] = l;
         loss += l;
     }
 
@@ -82,57 +82,6 @@ double simulator_bool(const bool C[][N_GROUP], const double I_PROB[],
     return loss;
 }
 
-// CとI_PROBを与えると誤差を返す関数。
-double simulator_bool(const bool C[][N_GROUP], const double I_PROB[]) {
-    double S[2][N_GROUP] = {}, I[2][N_GROUP] = {}, SUM[N_GROUP];
-    // R[sc21::T + 1][N_GROUP] = {0};
-    for (int i = 0; i < N_GROUP; i++) {
-        S[0][i] = sc21::N[i];
-    }
-    S[0][0] -= 1.0;
-    I[0][0] = 1.0;
-
-    int C_LIST[sc21::N_LINK][2];
-    int cnt = 0;
-    for (int i = 0; i < N_GROUP; i++) {
-        for (int j = i + 1; j < N_GROUP; j++) {
-            if (C[i][j]) {
-                C_LIST[cnt][0] = i;
-                C_LIST[cnt][1] = j;
-                cnt++;
-            }
-        }
-    }
-
-    for (int t = 0; t < sc21::T; t++) {
-        std::fill(S[1], S[1] + N_GROUP, 0.0);
-        std::fill(I[1], I[1] + N_GROUP, 0.0);
-        std::fill(SUM, SUM + N_GROUP, 0.0);
-
-        for (int i = 0; i < sc21::N_LINK; i++) {
-            auto &[x, y] = C_LIST[i];
-            SUM[x] += I[0][y];
-            SUM[y] += I[0][x];
-        }
-
-        for (int i = 0; i < N_GROUP; i++) {
-            double sum = SUM[i] * sc21::BETA2 * S[0][i];
-            S[1][i] = S[0][i] - sc21::BETA * S[0][i] * I[0][i] - sum;
-            I[1][i] = I[0][i] + sc21::BETA * S[0][i] * I[0][i] + sum -
-                      sc21::GAMMA * I[0][i];
-            // R[t + 1][i] = R[t][i] + sc21::GAMMA * I[t][i];
-        }
-        std::swap(S[0], S[1]);
-        std::swap(I[0], I[1]);
-    }
-
-    double loss = 0.0;
-    for (int i = 0; i < N_GROUP; i++) {
-        loss += (I[0][i] - I_PROB[i]) * (I[0][i] - I_PROB[i]);
-    }
-
-    return loss;
-}
 
 // CとI_PROBを与えると誤差を返す関数。
 double simulator(const int C[][N_GROUP], const double I_PROB[]) {
@@ -375,7 +324,7 @@ int main() {
     const double eps = 1e-7;
 
     auto start_t = std::chrono::system_clock::now();
-    double TIME_LIMIT = 300;
+    double TIME_LIMIT = 295;
     const int L_num = 48;
     bool L[L_num][N_GROUP][N_GROUP];
     bool BEST[L_num][N_GROUP][N_GROUP] = {};

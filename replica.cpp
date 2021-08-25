@@ -189,7 +189,7 @@ void init_c(int C[][N_GROUP]) {
     }
     std::cout << cnt << "\n";
 
-    for (int i = 0; i < sc21::N_LINK - N_GROUP - cnt; i++) {
+    for (int i = 0; i < sc21::N_LINK - (N_GROUP-1) - cnt; i++) {
         while (true) {
             int a = xor128() % N_GROUP, b = xor128() % N_GROUP;
             if ((a < b) && C[a][b] == 0) {

@@ -21,16 +21,6 @@ unsigned int xor128() {
 
 const unsigned long long int cycle_per_sec = 2800000000;
 
-unsigned long long int getCycle() {
-    unsigned int low, high;
-    __asm__ volatile("rdtsc" : "=a"(low), "=d"(high));
-    return ((unsigned long long int)low) | ((unsigned long long int)high << 32);
-}
-
-double getTime(unsigned long long int begin_cycle) {
-    return (double)(getCycle() - begin_cycle) / cycle_per_sec;
-}
-
 // CとI_PROBを与えると誤差を返す関数。
 double simulator(const int C[][N_GROUP], const double I_PROB[]) {
     double S[2][N_GROUP] = {0}, I[2][N_GROUP] = {0};
@@ -120,15 +110,17 @@ void modify(int C[][N_GROUP], const int change) {
 
 // 焼きなまし法
 double sa(int C[][N_GROUP]) {
-    double min = 100000.0, start_t = clock(), TIME_LIMIT = 0.5;
-
+    double min = 100000.0;
+    auto start_t = std::chrono::system_clock::now();
+    double TIME_LIMIT = 0.5;
     double start_temp = 100, end_temp = 0;
     double pre_score = simulator(C, sc21::I_PROB);
     int epoch = 1;
 
     while (true) {
-        double now_t = clock();
-        if ((now_t - start_t) / CLOCKS_PER_SEC > TIME_LIMIT) break;
+        auto now_t = std::chrono::system_clock::now();
+        double e = std::chrono::duration_cast<std::chrono::seconds>(now_t-start_t).count();
+        if (e > TIME_LIMIT) break;
 
         int new_state[N_GROUP][N_GROUP];
 
@@ -139,7 +131,7 @@ double sa(int C[][N_GROUP]) {
         }
 
         //だんだん変更量を減少させるように
-        int change = 1 + 1 - (int)(2 * (now_t) / TIME_LIMIT) + xor128() % 2;
+        int change = 1;
 
         modify(new_state, change);
 
@@ -147,7 +139,7 @@ double sa(int C[][N_GROUP]) {
         min = std::min(min, new_score);
 
         double temp =
-            start_temp + (end_temp - start_temp) * (now_t) / TIME_LIMIT;
+            start_temp + (end_temp - start_temp) * e / TIME_LIMIT;
         double prob = exp((pre_score - new_score) / temp);
 
         // std::cout<<pre_score<<" "<<new_score<<" "<<temp<<" "<<prob<<"\n";
@@ -155,7 +147,7 @@ double sa(int C[][N_GROUP]) {
         long double p = xor128() % 1280000;
         p /= 1280000;
 
-        if (prob > p * (now_t) / TIME_LIMIT) {
+        if (prob > p * e / TIME_LIMIT) {
             for (int i = 0; i < N_GROUP; i++) {
                 for (int j = 0; j < N_GROUP; j++) {
                     C[i][j] = new_state[i][j];
@@ -164,7 +156,7 @@ double sa(int C[][N_GROUP]) {
             pre_score = new_score;
         }
     }
-
+    printf("%lf\n",pre_score);
     return pre_score;
 }
 
@@ -219,10 +211,10 @@ void initialize(int L[][N_GROUP][N_GROUP], int T[], int len) {
 int main() {
     sc21::SC_input();
 
-    const int k = 1;
+    const int k = 10;
     const int eps = 1e-7;
 
-    double start_t = clock();
+    auto start_t = std::chrono::system_clock::now();
     double TIME_LIMIT = 90;
     int L_num = 48;
     int L[L_num][N_GROUP][N_GROUP];
@@ -230,8 +222,11 @@ int main() {
     initialize(L, tmp, L_num);
 
     while (true) {
-        double now_t = clock();
-        if ((now_t - start_t) / CLOCKS_PER_SEC > TIME_LIMIT) break;
+        auto now_t = std::chrono::system_clock::now();
+        double e =
+            std::chrono::duration_cast<std::chrono::seconds>(now_t - start_t)
+                .count();
+        if (e > TIME_LIMIT) break;
         for (int i = 0; i < L_num; i++) {
             score[i] = sa(L[i]);
         }

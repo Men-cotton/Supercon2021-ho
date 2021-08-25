@@ -21,7 +21,7 @@ unsigned int xor128() {
 
 // CとI_PROBを与えると誤差を返す関数。
 double simulator(const bool C[][N_GROUP], const double I_PROB[]) {
-    double S[2][N_GROUP] = {}, I[2][N_GROUP] = {};
+    double S[2][N_GROUP] = {}, I[2][N_GROUP] = {}, SUM[N_GROUP];
     // R[sc21::T + 1][N_GROUP] = {0};
     for (int i = 0; i < N_GROUP; i++) {
         S[0][i] = sc21::N[i];
@@ -29,16 +29,31 @@ double simulator(const bool C[][N_GROUP], const double I_PROB[]) {
     S[0][0] -= 1.0;
     I[0][0] = 1.0;
 
+    int C_LIST[sc21::N_LINK][2];
+    int cnt = 0;
+    for (int i = 0; i < N_GROUP; i++) {
+        for (int j = i + 1; j < N_GROUP; j++) {
+            if (C[i][j]) {
+                C_LIST[cnt][0] = i;
+                C_LIST[cnt][1] = j;
+                cnt++;
+            }
+        }
+    }
+
     for (int t = 0; t < sc21::T; t++) {
         std::fill(S[1], S[1] + N_GROUP, 0.0);
         std::fill(I[1], I[1] + N_GROUP, 0.0);
+        std::fill(SUM, SUM + N_GROUP, 0.0);
+
+        for (int i = 0; i < sc21::N_LINK; i++) {
+            auto &[x, y] = C_LIST[i];
+            SUM[x] += I[0][y];
+            SUM[y] += I[0][x];
+        }
 
         for (int i = 0; i < N_GROUP; i++) {
-            double sum = 0;
-            for (int j = 0; j < N_GROUP; j++) {
-                sum += C[i][j] * I[0][j];
-            }
-            sum *= sc21::BETA2 * S[0][i];
+            double sum = SUM[i] * sc21::BETA2 * S[0][i];
             S[1][i] = S[0][i] - sc21::BETA * S[0][i] * I[0][i] - sum;
             I[1][i] = I[0][i] + sc21::BETA * S[0][i] * I[0][i] + sum -
                       sc21::GAMMA * I[0][i];
@@ -255,7 +270,7 @@ void initialize(bool L[][N_GROUP][N_GROUP], double T[], int len) {
     }
     std::cout << simulator(L[0], sc21::I_PROB) << "\n";
 
-    double start_temp = 0.01, end_temp = 10.0;
+    double start_temp = 0.01, end_temp = 15.0;
 
     for (int i = 0; i < len; i++) {
         T[i] = start_temp + (end_temp - start_temp) * (double)i / (double)len;
@@ -270,7 +285,7 @@ int main() {
 
     auto start_t = std::chrono::system_clock::now();
     double TIME_LIMIT = 90;
-    const int L_num = 48;
+    const int L_num = 96;
     bool L[L_num][N_GROUP][N_GROUP];
     bool BEST[L_num][N_GROUP][N_GROUP] = {};
     double tmp[L_num], score[L_num];

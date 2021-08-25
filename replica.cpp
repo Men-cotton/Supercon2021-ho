@@ -95,8 +95,8 @@ void modify(int C[][N_GROUP], const int change) {
 }
 
 // 焼きなまし法
-double sa(int C[][N_GROUP], double s_temp, double best[][N_GROUP],
-          double &min) {
+double sa(int C[][N_GROUP], double s_temp, int best[][N_GROUP],
+          double &min_score) {
     // double min = 100000.0;
     // auto start_t = std::chrono::system_clock::now();
     // double TIME_LIMIT = 0.05;
@@ -143,17 +143,18 @@ double sa(int C[][N_GROUP], double s_temp, double best[][N_GROUP],
             }
             // printf("%lf\n", new_score);
             pre_score = new_score;
-        }
-    }
 
-    if (min > pre_score) {
-        min = pre_score;
-        for (int i = 0; i < N_GROUP; i++) {
-            for (int j = 0; j < N_GROUP; j++) {
-                best[i][j] = C[i][j];
+            if (min_score > pre_score) {
+                min_score = pre_score;
+                for (int i = 0; i < N_GROUP; i++) {
+                    for (int j = 0; j < N_GROUP; j++) {
+                        best[i][j] = C[i][j];
+                    }
+                }
             }
         }
     }
+
     // printf("%lf\n", pre_score);
     return pre_score;
 }
@@ -187,7 +188,7 @@ void init_c(int C[][N_GROUP], double s[N_GROUP], double sum) {
             C[0][i] = C[i][0] = 1;
         }
     }
-    std::cout << cnt << "\n";
+    // std::cout << cnt << "\n";
 
     for (int i = 0; i < sc21::N_LINK - (N_GROUP - 1) - cnt; i++) {
         while (true) {
@@ -229,15 +230,16 @@ int main() {
 
     const double k = 0.1;
     const double eps = 1e-7;
-    double min = 1e9;
-    double best[N_GROUP][N_GROUP];
 
     auto start_t = std::chrono::system_clock::now();
-    double TIME_LIMIT = 30;
+    double TIME_LIMIT = 90;
     const int L_num = 48;
     int L[L_num][N_GROUP][N_GROUP];
+    int BEST[L_num][N_GROUP][N_GROUP] = {};
     double tmp[L_num], score[L_num];
+    double best_score[L_num];
     initialize(L, tmp, L_num);
+    std::fill(best_score, best_score + L_num, 1e9);
 
     while (true) {
         // for (int i = 0; i < L_num; i++) {
@@ -253,14 +255,23 @@ int main() {
                 .count();
         if (e > TIME_LIMIT) break;
 
-#pragma omp parallel for
+        double min = best_score[0];
         for (int i = 0; i < L_num; i++) {
-            score[i] = sa(L[i], tmp[i], best, min);
+            min = std::min(min, best_score[i]);
         }
 
-        double min = score[0];
         for (int i = 0; i < L_num; i++) {
-            min = std::min(min, score[i]);
+            best_score[i] = std::min(best_score[i], min + 0.01);
+        }
+
+#pragma omp parallel for
+        for (int i = 0; i < L_num; i++) {
+            score[i] = sa(L[i], tmp[i], BEST[i], best_score[i]);
+        }
+
+        min = best_score[0];
+        for (int i = 0; i < L_num; i++) {
+            min = std::min(min, best_score[i]);
         }
 
         printf("score: %lf\n", min);
@@ -279,22 +290,23 @@ int main() {
         }
     }
 
+    double min = 1e9;
     int ind = -1;
     for (int i = 0; i < L_num; i++) {
-        if (min > simulator(L[i], sc21::I_PROB)) {
+        if (min > best_score[i]) {
             ind = i;
-            min = simulator(L[i], sc21::I_PROB);
+            min = best_score[i];
         }
     }
 
     for (int i = 0; i < N_GROUP; i++) {
         for (int j = 0; j < N_GROUP; j++) {
-            sc21::C[i][j] = best[i][j];
+            sc21::C[i][j] = BEST[ind][i][j];
         }
     }
 
     //提出時にはここを消せ！！！！！！！！！！！
-    std::cout << min << "\n";
+    std::cout << simulator(sc21::C, sc21::I_PROB) << "\n";
 
     sc21::SC_output();
 }

@@ -26,7 +26,7 @@ inline double zero_one_random() {
 
 // CとI_PROBを与えると誤差を返す関数。
 double simulator_bool_sa(const bool C[][N_GROUP], const double I_PROB[],
-                      double LOSS[], bool abs = false) {
+                         double LOSS[], bool abs = false) {
     double S[2][N_GROUP] = {}, I[2][N_GROUP] = {}, SUM[N_GROUP];
     // R[sc21::T + 1][N_GROUP] = {0};
     for (int i = 0; i < N_GROUP; i++) {
@@ -185,6 +185,7 @@ int weight_sample(double weight[N_GROUP], double sum) {
         }
         s -= weight[i];
     }
+    return 0;
 }
 
 void modify(bool C[][N_GROUP], const int change, double loss[N_GROUP],

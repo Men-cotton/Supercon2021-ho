@@ -185,7 +185,7 @@ int weight_sample(double weight[N_GROUP], double sum) {
         }
         s -= weight[i];
     }
-    return 0;
+    return N_GROUP - 1;
 }
 
 void modify(bool C[][N_GROUP], const int change, double loss[N_GROUP],

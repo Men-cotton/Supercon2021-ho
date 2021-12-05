@@ -81,17 +81,17 @@ int main(int argc, char **argv)
     for (int steps = 0; true /*steps < MAX_STEP_GREEDY*/; steps++)
     {
         update_rnd(rnd);
-        bool swaped = false;
+        bool swapped = false;
         int i1, i2, j1, j2;
 
-        while (!swaped)
+        while (!swapped)
         {
             update_rnd(rnd);
             i1 = rnd % N_GROUP, j1 = (rnd / N_GROUP) % N_GROUP;
             update_rnd(rnd);
             i2 = rnd % N_GROUP, j2 = (rnd / N_GROUP) % N_GROUP;
 
-            swaped = swap_C_targets(i1, j1, i2, j2);
+            swapped = swap_C_targets(i1, j1, i2, j2);
         };
 
         simulation(T);

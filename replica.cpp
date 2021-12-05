@@ -1,16 +1,17 @@
 #include <bits/stdc++.h>
-#include <math.h>
+#include <cmath>
 #include <omp.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 
 namespace sc21 {
+
 #include "sc21.h"
+
 }
 
 inline unsigned int xor128() {
-    static unsigned int x = 123456789, y = 362436069, z = 521288629,
-                        w = 88675123;
+    static unsigned int x = 123456789, y = 362436069, z = 521288629, w = 88675123;
     unsigned int t;
     t = (x ^ (x << 11));
     x = y;
@@ -20,29 +21,29 @@ inline unsigned int xor128() {
 }
 
 inline double zero_one_random() {
-    constexpr unsigned int mod = 1 << 20;
-    return (double)(xor128() & (mod - 1)) / mod;
+    constexpr unsigned int MOD = 1 << 20;
+    return (double) (xor128() & (MOD - 1)) / MOD;
 }
 
+
 // CとI_PROBを与えると誤差を返す関数。
-double simulator_bool_sa(const bool C[][N_GROUP], const double I_PROB[],
-                         double LOSS[], bool abs = false) {
+double simulator_sa(const bool C[][N_GROUP], const double I_PROB[], double LOSS[], const bool abs = false) {
     double S[2][N_GROUP] = {}, I[2][N_GROUP] = {}, SUM[N_GROUP];
     // R[sc21::T + 1][N_GROUP] = {0};
     for (int i = 0; i < N_GROUP; i++) {
         S[0][i] = sc21::N[i];
     }
-    S[0][0] -= 1.0;
-    I[0][0] = 1.0;
+    S[0][0] -= 1.0, I[0][0] += 1.0;
 
     int C_LIST[sc21::N_LINK][2];
-    int cnt = 0;
-    for (int i = 0; i < N_GROUP; i++) {
-        for (int j = i + 1; j < N_GROUP; j++) {
-            if (C[i][j]) {
-                C_LIST[cnt][0] = i;
-                C_LIST[cnt][1] = j;
-                cnt++;
+    {
+        int cnt = 0;
+        for (int i = 0; i < N_GROUP; i++) {
+            for (int j = i + 1; j < N_GROUP; j++) {
+                if (C[i][j]) {
+                    C_LIST[cnt][0] = i, C_LIST[cnt][1] = j;
+                    cnt++;
+                }
             }
         }
     }
@@ -54,19 +55,16 @@ double simulator_bool_sa(const bool C[][N_GROUP], const double I_PROB[],
 
         for (int i = 0; i < sc21::N_LINK; i++) {
             auto &[x, y] = C_LIST[i];
-            SUM[x] += I[0][y];
-            SUM[y] += I[0][x];
+            SUM[x] += I[0][y], SUM[y] += I[0][x];
         }
 
         for (int i = 0; i < N_GROUP; i++) {
             double sum = SUM[i] * sc21::BETA2 * S[0][i];
             S[1][i] = S[0][i] - sc21::BETA * S[0][i] * I[0][i] - sum;
-            I[1][i] = I[0][i] + sc21::BETA * S[0][i] * I[0][i] + sum -
-                      sc21::GAMMA * I[0][i];
+            I[1][i] = I[0][i] + sc21::BETA * S[0][i] * I[0][i] + sum - sc21::GAMMA * I[0][i];
             // R[t + 1][i] = R[t][i] + sc21::GAMMA * I[t][i];
         }
-        std::swap(S[0], S[1]);
-        std::swap(I[0], I[1]);
+        std::swap(S[0], S[1]), std::swap(I[0], I[1]);
     }
 
     double loss = 0.0;
@@ -96,14 +94,13 @@ double simulator_bool_sa(const bool C[][N_GROUP], const double I_PROB[],
 }
 
 // CとI_PROBを与えると誤差を返す関数。
-double simulator_bool(const bool C[][N_GROUP], const double I_PROB[]) {
+double simulator(const bool C[][N_GROUP], const double I_PROB[]) {
     double S[2][N_GROUP] = {}, I[2][N_GROUP] = {};
     // R[sc21::T + 1][N_GROUP] = {0};
     for (int i = 0; i < N_GROUP; i++) {
         S[0][i] = sc21::N[i];
     }
-    S[0][0] -= 1.0;
-    I[0][0] = 1.0;
+    S[0][0] -= 1.0, I[0][0] += 1.0;
 
     for (int t = 0; t < sc21::T; t++) {
         std::fill(S[1], S[1] + N_GROUP, 0.0);
@@ -116,12 +113,10 @@ double simulator_bool(const bool C[][N_GROUP], const double I_PROB[]) {
             }
             sum *= sc21::BETA2 * S[0][i];
             S[1][i] = S[0][i] - sc21::BETA * S[0][i] * I[0][i] - sum;
-            I[1][i] = I[0][i] + sc21::BETA * S[0][i] * I[0][i] + sum -
-                      sc21::GAMMA * I[0][i];
+            I[1][i] = I[0][i] + sc21::BETA * S[0][i] * I[0][i] + sum - sc21::GAMMA * I[0][i];
             // R[t + 1][i] = R[t][i] + sc21::GAMMA * I[t][i];
         }
-        std::swap(S[0], S[1]);
-        std::swap(I[0], I[1]);
+        std::swap(S[0], S[1]), std::swap(I[0], I[1]);
     }
 
     double loss = 0.0;
@@ -133,14 +128,13 @@ double simulator_bool(const bool C[][N_GROUP], const double I_PROB[]) {
 }
 
 // CとI_PROBを与えると誤差を返す関数。
-double simulator(const int C[][N_GROUP], const double I_PROB[]) {
+double simulator_final(const int C[][N_GROUP], const double I_PROB[]) {
     double S[2][N_GROUP] = {}, I[2][N_GROUP] = {};
     // R[sc21::T + 1][N_GROUP] = {0};
     for (int i = 0; i < N_GROUP; i++) {
         S[0][i] = sc21::N[i];
     }
-    S[0][0] -= 1.0;
-    I[0][0] = 1.0;
+    S[0][0] -= 1.0, I[0][0] += 1.0;
 
     for (int t = 0; t < sc21::T; t++) {
         std::fill(S[1], S[1] + N_GROUP, 0.0);
@@ -153,12 +147,10 @@ double simulator(const int C[][N_GROUP], const double I_PROB[]) {
             }
             sum *= sc21::BETA2 * S[0][i];
             S[1][i] = S[0][i] - sc21::BETA * S[0][i] * I[0][i] - sum;
-            I[1][i] = I[0][i] + sc21::BETA * S[0][i] * I[0][i] + sum -
-                      sc21::GAMMA * I[0][i];
+            I[1][i] = I[0][i] + sc21::BETA * S[0][i] * I[0][i] + sum - sc21::GAMMA * I[0][i];
             // R[t + 1][i] = R[t][i] + sc21::GAMMA * I[t][i];
         }
-        std::swap(S[0], S[1]);
-        std::swap(I[0], I[1]);
+        std::swap(S[0], S[1]), std::swap(I[0], I[1]);
     }
 
     double loss = 0.0;
@@ -169,7 +161,7 @@ double simulator(const int C[][N_GROUP], const double I_PROB[]) {
     return loss;
 }
 
-inline double loss_sum(bool C[][N_GROUP], double loss[N_GROUP]) {
+inline double loss_sum(const bool C[][N_GROUP], const double loss[N_GROUP]) {
     double sum = 0.0;
     for (int i = 0; i < N_GROUP; i++) {
         sum += loss[i];
@@ -188,58 +180,47 @@ int weight_sample(double weight[N_GROUP], double sum) {
     return N_GROUP - 1;
 }
 
-void modify(bool C[][N_GROUP], const int change, double loss[N_GROUP],
-            double loss_sum) {
+// 辺を change 本付け替える
+void modify(bool C[][N_GROUP], const int change, double loss[N_GROUP], double loss_sum) {
     if (change <= 0) return;
 
     for (int i = 0; i < change; i++) {
-        int a, b;
+        int base_vertex, pre_vertex;
         while (true) {
-            a = xor128() % N_GROUP;
-            b = weight_sample(loss, loss_sum);
+            base_vertex = xor128() % N_GROUP;
+            pre_vertex = weight_sample(loss, loss_sum);
 
-            if (a != b && C[a][b] == 1) {
+            if (base_vertex != pre_vertex && C[base_vertex][pre_vertex]) {
                 break;
             }
         }
-        int c;
-        bool flag;
-        while (true) {
-            c = weight_sample(loss, loss_sum);
-            flag = xor128() % 2;
 
-            if (c != a) {
-                if (flag) {
-                    if (C[c][a] == 0) {
-                        break;
-                    }
-                } else {
-                    if (C[a][c] == 0) {
-                        break;
-                    }
+        int new_vertex;
+        while (true) {
+            new_vertex = weight_sample(loss, loss_sum);
+
+            if (new_vertex != base_vertex) {
+                if (!C[new_vertex][base_vertex] && !C[base_vertex][new_vertex]) {
+                    break;
                 }
             }
         }
-        C[a][b] = 0;
-        C[b][a] = 0;
-        C[c][a] = 1;
-        C[a][c] = 1;
+        C[base_vertex][pre_vertex] = C[pre_vertex][base_vertex] = false;
+        C[base_vertex][new_vertex] = C[new_vertex][base_vertex] = true;
     }
 }
 
-// 焼きなまし法
-double sa(bool C[][N_GROUP], double s_temp, bool best[][N_GROUP],
-          double &min_score, bool abs) {
+double yakinamashi(bool C[][N_GROUP], const double s_temp, bool best[][N_GROUP], double &min_score, const bool abs) {
     // double min = 100000.0;
     // auto start_t = std::chrono::system_clock::now();
     // double TIME_LIMIT = 0.05;
     double pre_loss[N_GROUP], new_loss[N_GROUP];
-    double pre_score = simulator_bool_sa(C, sc21::I_PROB, pre_loss, abs);
+    double pre_score = simulator_sa(C, sc21::I_PROB, pre_loss, abs);
     double pre_sample_sum = loss_sum(C, pre_loss);
 
     // int epoch = 1;
 
-    int change = 1 + (int)s_temp / 20;
+    const int change = 1 + (int) s_temp / 20;
 
     for (int epoch = 0; epoch < 100; epoch++) {
         // auto now_t = std::chrono::system_clock::now();
@@ -257,11 +238,9 @@ double sa(bool C[][N_GROUP], double s_temp, bool best[][N_GROUP],
         }
 
         //だんだん変更量を減少させるように
-
         modify(new_state, change, pre_loss, pre_sample_sum);
 
-        double new_score =
-            simulator_bool_sa(new_state, sc21::I_PROB, new_loss, abs);
+        double new_score = simulator_sa(new_state, sc21::I_PROB, new_loss, abs);
         // printf("%lf, %lf\n", pre_score, new_score);
         // min = std::min(min, new_score);
 
@@ -269,9 +248,7 @@ double sa(bool C[][N_GROUP], double s_temp, bool best[][N_GROUP],
 
         // std::cout<<pre_score<<" "<<new_score<<" "<<temp<<" "<<prob<<"\n";
 
-        double p = zero_one_random();
-
-        if (prob > p) {
+        if (prob > zero_one_random()) {
             for (int i = 0; i < N_GROUP; i++) {
                 for (int j = 0; j < N_GROUP; j++) {
                     C[i][j] = new_state[i][j];
@@ -300,159 +277,165 @@ double sa(bool C[][N_GROUP], double s_temp, bool best[][N_GROUP],
     return pre_score;
 }
 
-void init_c(bool C[][N_GROUP], double s[N_GROUP], double sum) {
-    std::vector<std::pair<double, int>> v;
+void init_c(bool C[][N_GROUP], const double s[N_GROUP], const double sum_I) {
+    std::vector<std::pair<double, int>> ratio;
 
     //初期化
     for (int i = 0; i < N_GROUP; i++) {
         //ここはsc21::I_PROB[i],iでもいいと思います
-        v.emplace_back(sc21::I_PROB[i] / sc21::N[i], i);
+        ratio.emplace_back(sc21::I_PROB[i] / sc21::N[i], i);
         for (int j = 0; j < N_GROUP; j++) {
-            C[i][j] = 0;
+            C[i][j] = false;
         }
     }
 
-    std::sort(v.begin(), v.end());
-
-    for (int i = 0; i < N_GROUP - 1; i++) {
-        C[v[i].second][v[i + 1].second] = 1;
-        C[v[i + 1].second][v[i].second] = 1;
-    }
+    std::sort(ratio.begin(), ratio.end());
 
     int cnt = 0;
+    for (int i = 0; i < N_GROUP - 1; i++) {
+        cnt++;
+        int vertex1 = ratio[i].second, vertex2 = ratio[i + 1].second;
+        C[vertex1][vertex2] = C[vertex2][vertex1] = true;
+    }
+
     for (int i = 1; i < N_GROUP; i++) {
-        if (cnt + N_GROUP >= sc21::N_LINK) {
+        if (cnt + 1 >= sc21::N_LINK) { // ランダム辺を一個は作る
             break;
         }
-        if (s[i] < sum / (N_GROUP * 0.7) && C[0][i] == 0) {
+        if (s[i] < sum_I / (N_GROUP * 0.7) && !C[0][i]) {
             cnt++;
-            C[0][i] = C[i][0] = 1;
+            C[0][i] = C[i][0] = true;
         }
     }
     // std::cout << cnt << "\n";
 
-    for (int i = 0; i < sc21::N_LINK - (N_GROUP - 1) - cnt; i++) {
+    for (int i = cnt; i < sc21::N_LINK; i++) { // ランダム辺生成
         while (true) {
             int a = xor128() % N_GROUP, b = xor128() % N_GROUP;
-            if ((a < b) && C[a][b] == 0) {
-                C[a][b] = 1;
-                C[b][a] = 1;
+            if ((a < b) && !C[a][b]) {
+                C[a][b] = C[b][a] = true;
                 break;
             }
         }
     }
 }
 
-void initialize(bool L[][N_GROUP][N_GROUP], double T[], int len) {
+void initialize(bool L[][N_GROUP][N_GROUP], double T[], const int THREAD_NUM) {
     double s[N_GROUP];
     memcpy(s, sc21::I_PROB, sizeof(sc21::I_PROB));
     std::sort(s, s + N_GROUP);
-    double sum = 0.0;
+    double I_sum = 0.0;
     for (int i = 0; i < N_GROUP; i++) {
-        sum += s[i];
+        I_sum += s[i];
     }
 
-    //初期化
-
-    for (int k = 0; k < len; k++) {
-        init_c(L[k], s, sum);
+    // グラフ初期化
+    for (int thread = 0; thread < THREAD_NUM; thread++) {
+        init_c(L[thread], s, I_sum);
     }
-    std::cout << simulator_bool(L[0], sc21::I_PROB) << "\n";
+    std::cout << simulator(L[0], sc21::I_PROB) << "\n";
 
-    double start_temp = 0.01, end_temp = 15.0;
-
-    for (int i = 0; i < len; i++) {
-        T[i] = start_temp + (end_temp - start_temp) * (double)i / (double)len;
+    { // 線形に高くなる温度を構築
+        const double START_TEMP = 0.01, END_TEMP = 15.0;
+        for (int i = 0; i < THREAD_NUM; i++) {
+            T[i] = START_TEMP + (END_TEMP - START_TEMP) * (double) i / (double) THREAD_NUM;
+        }
     }
 }
 
 int main() {
     sc21::SC_input();
 
-    const double k = 3.0;
-    const double eps = 1e-7;
+    const double K = 3.0;
+    const double EPS = 1e-7;
+    const double TIME_LIMIT = 295;
+    const int THREAD_NUM = 48;
 
-    auto start_t = std::chrono::system_clock::now();
-    double TIME_LIMIT = 295;
-    const int L_num = 48;
-    bool L[L_num][N_GROUP][N_GROUP];
-    bool BEST[L_num][N_GROUP][N_GROUP] = {};
-    double tmp[L_num], score[L_num];
-    double best_score[L_num];
-    initialize(L, tmp, L_num);
-    std::fill(best_score, best_score + L_num, 1e9);
+    const auto start_t = std::chrono::system_clock::now();
+    bool L[THREAD_NUM][N_GROUP][N_GROUP];
+    bool BEST[THREAD_NUM][N_GROUP][N_GROUP] = {};
+    double temperature[THREAD_NUM], score[THREAD_NUM];
+    double best_score[THREAD_NUM];
+    initialize(L, temperature, THREAD_NUM);
+    std::fill(best_score, best_score + THREAD_NUM, 1e9);
 
     bool pre_abs = true;
 
     while (true) {
-        // for (int i = 0; i < L_num; i++) {
-        //     if (i != L_num - 1)
-        //         printf("%lf ", tmp[i]);
+        // for (int i = 0; i < THREAD_NUM; i++) {
+        //     if (i != THREAD_NUM - 1)
+        //         printf("%lf ", temperature[i]);
         //     else
-        //         printf("%lf\n", tmp[i]);
+        //         printf("%lf\n", temperature[i]);
         // }
 
-        auto now_t = std::chrono::system_clock::now();
-        double e = std::chrono::duration_cast<std::chrono::milliseconds>(
-                       now_t - start_t)
-                       .count() /
-                   1000.0;
+        double e;
+        {
+            auto now_t = std::chrono::system_clock::now();
+            e = std::chrono::duration_cast<std::chrono::milliseconds>(now_t - start_t).count() / 1000.0;
+        }
         if (e > TIME_LIMIT) break;
 
-        double min = best_score[0];
-        for (int i = 0; i < L_num; i++) {
-            min = std::min(min, best_score[i]);
-        }
-
-        for (int i = 0; i < L_num; i++) {
-            best_score[i] = std::min(best_score[i], min + 0.01);
+        {
+            double current_min = best_score[0];
+            for (int i = 0; i < THREAD_NUM; i++) {
+                current_min = std::min(current_min, best_score[i]);
+            }
+            for (int i = 0; i < THREAD_NUM; i++) {
+                best_score[i] = std::min(best_score[i], current_min + 0.01);
+            }
         }
 
         double temp_scale = (1 - std::min(e / TIME_LIMIT * 1.03, 0.99999));
         // printf("%lf\n", temp_scale);
 
-        bool abs = e / TIME_LIMIT < 0.9;
+        bool abs = (e / TIME_LIMIT) < 0.9;
 
         if (pre_abs != abs) {
-            std::fill(best_score, best_score + L_num, 1e9);
+            std::fill(best_score, best_score + THREAD_NUM, 1e9);
         }
         pre_abs = abs;
 
+        // 焼きなましを並列でやる
 #pragma omp parallel for
-        for (int i = 0; i < L_num; i++) {
-            score[i] =
-                sa(L[i], tmp[i] * temp_scale, BEST[i], best_score[i], abs);
+        for (int i = 0; i < THREAD_NUM; i++) {
+            score[i] = yakinamashi(L[i], temperature[i] * temp_scale, BEST[i], best_score[i], abs);
         }
 
-        min = best_score[0];
-        for (int i = 0; i < L_num; i++) {
-            min = std::min(min, best_score[i]);
+        {
+            double min = best_score[0];
+            for (int i = 0; i < THREAD_NUM; i++) {
+                min = std::min(min, best_score[i]);
+            }
+            printf("score: %lf\n", min);
         }
 
-        printf("score: %lf\n", min);
-
-        for (int ii = 0; ii < 5; ii++) {
-            for (int i = 0; i < L_num - 1; i++) {
-                double p =
-                    std::min(1.0, std::exp(((double)score[i] - score[i + 1]) *
-                                           (1.0 / (k * tmp[i] + eps) -
-                                            1.0 / (k * tmp[i + 1] + eps))));
-                double q = (double)xor128() / INT32_MAX;
-                // printf("exp: %lf\n", tmp[i]);
+        for (int epoch = 0; epoch < 5; epoch++) {
+            for (int thread = 0; thread < THREAD_NUM - 1; thread++) {
+                double p;
+                {
+                    double score_diff = (double) score[thread] - score[thread + 1];
+                    double hoge = 1.0 / (K * temperature[thread] + EPS) - 1.0 / (K * temperature[thread + 1] + EPS);
+                    p = std::min(1.0, std::exp(score_diff * hoge));
+                }
+                double q = (double) xor128() / INT32_MAX;
+                // printf("exp: %lf\n", temperature[thread]);
                 // printf("p: %le\n", p);
                 if (q > p) {
-                    std::swap(tmp[i], tmp[i + 1]);
+                    std::swap(temperature[thread], temperature[thread + 1]);
                 }
             }
         }
     }
 
-    double min = 1e9;
     int ind = -1;
-    for (int i = 0; i < L_num; i++) {
-        if (min > best_score[i]) {
-            ind = i;
-            min = best_score[i];
+    {
+        double min = 1e9;
+        for (int i = 0; i < THREAD_NUM; i++) {
+            if (min > best_score[i]) {
+                ind = i;
+                min = best_score[i];
+            }
         }
     }
 
@@ -463,7 +446,7 @@ int main() {
     }
 
     //提出時にはここを消せ！！！！！！！！！！！
-    std::cout << simulator(sc21::C, sc21::I_PROB) << "\n";
+    std::cout << simulator_final(sc21::C, sc21::I_PROB) << "\n";
 
     sc21::SC_output();
 }

@@ -410,7 +410,7 @@ int main() {
             printf("score: %lf\n", min);
         }
 
-        for (int epoch = 0; epoch < 5; epoch++) {
+        for (int i = 0; i < 5; i++) {
             for (int thread = 0; thread < THREAD_NUM - 1; thread++) {
                 double p;
                 {

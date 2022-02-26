@@ -16,7 +16,7 @@ double I_PROB[N_GROUP];
 
 int C[N_GROUP][N_GROUP];
 
-double TIME0;
+// double TIME0;
 
 void SC_input() {
     int rank = 0;
@@ -40,11 +40,11 @@ void SC_input() {
     MPI_Bcast(I_PROB, N_GROUP, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 #endif
 
-    TIME0 = omp_get_wtime();
+    // TIME0 = omp_get_wtime();
 }
 
 void SC_output() {
-    printf("# elapsed time= %f \n", omp_get_wtime() - TIME0);
+    // printf("# elapsed time= %f \n", omp_get_wtime() - TIME0);
 
     int i, j;
     for (i = 0; i < N_GROUP; i++) {

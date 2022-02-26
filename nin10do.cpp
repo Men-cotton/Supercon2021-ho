@@ -1,13 +1,14 @@
 #include <stdio.h>
 #include <math.h>
-#include "cssl.h"
+// #include "cssl.h"
 #include <stdlib.h>
-#include <omp.h>
-#include "mpi.h"
+// #include <omp.h>
+// #include "mpi.h"
 #include "sc21.h"
+#include <chrono>
 
 const int MAX_STEP_GREEDY = 10000;
-const int MAX_SEC_GREEDY = 290;
+const int MAX_SEC_GREEDY = 1435;//290;
 const int MAX_PROCESS_COUNT = 48;
 const int INIT_SEED = 12345;
 
@@ -27,44 +28,61 @@ inline bool swap_C_targets(const int i1, const int j1, const int i2, const int j
 
 inline double calc_score(const double p1[N_GROUP], const double p2[N_GROUP]);
 
-inline void update_rnd(unsigned &rnd)
-{
+inline void update_rnd(unsigned &rnd) {
     rnd = rnd ^ (rnd << 13);
     rnd = rnd ^ (rnd >> 17);
     rnd = rnd ^ (rnd << 5);
 }
 
-int main(int argc, char **argv)
-{
+struct Timer {
+    std::chrono::high_resolution_clock::time_point st;
+
+    Timer() { reset(); }
+
+    void reset() {
+        st = std::chrono::high_resolution_clock::now();
+    }
+
+    std::chrono::milliseconds::rep elapsed() {
+        auto ed = std::chrono::high_resolution_clock::now();
+        return std::chrono::duration_cast<std::chrono::milliseconds>(ed - st).count();
+    }
+};
+
+int main(int argc, char **argv) {
     unsigned seed[MAX_PROCESS_COUNT];
+    SC_input();
     /*-- for MPI --*/
+    /*
     MPI_Status status;
 
     MPI_Init(&argc, &argv);
-    double start = omp_get_wtime();
-    SC_input();
+
 
     int myId, processCount;
     MPI_Comm_rank(MPI_COMM_WORLD, &myId);
     MPI_Comm_size(MPI_COMM_WORLD, &processCount);
+    */
 
+    //Timer timer;
+    //timer.reset();
+    const int myId = 0, processCount = 1;
     /* generate seed */
-    if (myId == 0)
-    {
+    if (myId == 0) {
         int icon;
         double dwork[8];
         double r[MAX_PROCESS_COUNT];
 
         int rnd = INIT_SEED;
-        c_dm_vranu5(&rnd, r, processCount, (long)0, dwork, &icon);
-        for (int i = 0; i < processCount; i++)
-        {
-            seed[i] = (unsigned)(r[i] * 2147483647);
+        // c_dm_vranu5(&rnd, r, processCount, (long) 0, dwork, &icon);
+        r[0] = 1214;
+        for (int i = 0; i < processCount; i++) {
+            seed[i] = (unsigned) (r[i] * 2147483647);
             // printf("#seed[%d]=%d\n", i, seed[i]);
         };
     };
 
-    MPI_Bcast(&seed, processCount, MPI_INT, 0, MPI_COMM_WORLD);
+    //MPI_Bcast(&seed, processCount, MPI_INT, 0, MPI_COMM_WORLD);
 
     /* inference simulation */
 
@@ -73,19 +91,20 @@ int main(int argc, char **argv)
     simulation(T);
 
     double bestScore = calc_score(I_PROB, I);
+    double trueBestScore = bestScore;
+
 
     unsigned rnd = seed[myId];
     double *scoreArray;
-    scoreArray = (double *)malloc(processCount * sizeof(double));
+    scoreArray = (double *) malloc(processCount * sizeof(double));
+    int improvementCount = 0;
 
-    for (int steps = 0; true /*steps < MAX_STEP_GREEDY*/; steps++)
-    {
+    for (int steps = 0; true /*steps < MAX_STEP_GREEDY*/; steps++) {
         update_rnd(rnd);
         bool swapped = false;
         int i1, i2, j1, j2;
 
-        while (!swapped)
-        {
+        while (!swapped) {
             update_rnd(rnd);
             i1 = rnd % N_GROUP, j1 = (rnd / N_GROUP) % N_GROUP;
             update_rnd(rnd);
@@ -99,23 +118,30 @@ int main(int argc, char **argv)
         double currentScore = calc_score(I_PROB, I);
         double deltaScore = currentScore - bestScore;
 
-        if (deltaScore > 0.0)
-        {
+        if (deltaScore > 0.0) {
             update_rnd(rnd);
-            if ((rnd % 100 - 20 > steps / 2000 && deltaScore < 200 - (steps / 1000)) || rnd % 10000 > 9990 + steps / 18000)
+            if ((rnd % 100 - 20 > steps / 2000 && deltaScore < 200 - (steps / 1000)) ||
+                rnd % 10000 > 9990 + steps / 18000) {
                 bestScore = currentScore;
-            else
+                if (trueBestScore > bestScore) {
+                    trueBestScore = bestScore, improvementCount++;
+                }
+            } else
                 swap_C_targets(i1, j1, i2, j2);
-        }
-        else
+        } else {
             bestScore = currentScore;
+            if (trueBestScore > bestScore) {
+                trueBestScore = bestScore, improvementCount++;
+            }
+        }
 
-        if (steps % 1000 == 0)
-        {
-            double now = omp_get_wtime();
-            double sec = now - start;
-            if (sec > MAX_SEC_GREEDY)
+        if (steps % 1000 == 999) {
+            printf("%d  %lf\n", improvementCount, trueBestScore);
+            improvementCount = 0;
+            if (steps >= 219999) {
+                //printf("%d\n", steps);
                 break;
+            }
 
             /*
             if (myId == 10)
@@ -166,16 +192,14 @@ int main(int argc, char **argv)
     */
 
     int bestIndex = 0;
-    MPI_Gather(&bestScore, 1, MPI_DOUBLE, scoreArray, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    //MPI_Gather(&bestScore, 1, MPI_DOUBLE, scoreArray, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-    if (myId == 0)
-    {
+    /*
+    if (myId == 0) {
         double bestScore = scoreArray[0];
-        for (int i = 0; i < processCount; i++)
-        {
+        for (int i = 0; i < processCount; i++) {
             // printf("#score[%d]=%lf\n", i, scoreArray[i]);
-            if (bestScore > scoreArray[i])
-            {
+            if (bestScore > scoreArray[i]) {
                 bestScore = scoreArray[i];
                 bestIndex = i;
             };
@@ -183,77 +207,65 @@ int main(int argc, char **argv)
 
         // printf("#bestScore,bestIndex= %lf %d\n", bestScore, bestIndex);
     };
-    MPI_Bcast(&bestIndex, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    */
+    //MPI_Bcast(&bestIndex, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-    if (bestIndex != 0)
-    {
+    /*
+    if (bestIndex != 0) {
         int itag = 0;
-        if (myId == bestIndex)
-        {
+        if (myId == bestIndex) {
             MPI_Send(C, (N_GROUP * N_GROUP), MPI_INT, 0, itag, MPI_COMM_WORLD);
-        }
-        else if (myId == 0)
-        {
+        } else if (myId == 0) {
             MPI_Recv(C, (N_GROUP * N_GROUP), MPI_INT, bestIndex, itag, MPI_COMM_WORLD, &status);
         };
     };
+    */
 
-    if (myId == 0)
-    {
-        SC_output();
-        printf("Score: %f\n", scoreArray[bestIndex]);
+    if (myId == 0) {
+        // SC_output();
+        printf("Score: %f\n", bestScore);// scoreArray[bestIndex]);
     }
 
-    MPI_Finalize();
+    // MPI_Finalize();
     return 0;
 };
 
-void initialize_network(int N_LINK, unsigned rnd, int id)
-{
-    for (int i = 0; i < N_GROUP; i++)
-    {
-        for (int j = 0; j < N_GROUP; j++)
-        {
+void initialize_network(int N_LINK, unsigned rnd, int id) {
+    for (int i = 0; i < N_GROUP; i++) {
+        for (int j = 0; j < N_GROUP; j++) {
             C[i][j] = 0;
         };
     };
 
     int edgeCount = 0;
-    while (edgeCount < N_LINK)
-    {
+    while (edgeCount < N_LINK) {
         update_rnd(rnd);
         int i = rnd % N_GROUP, j = (rnd / N_GROUP) % N_GROUP;
-        if (C[i][j] == 0 && i != j)
-        {
+        if (C[i][j] == 0 && i != j) {
             edgeCount++;
             C[i][j] = 1, C[j][i] = 1;
         };
     };
 };
 
-inline void simulation(const int dayCount)
-{
+inline void simulation(const int dayCount) {
 #pragma omp parallel
     {
 #pragma omp for
-        for (int i = 0; i < N_GROUP; i++)
-        {
-            S0[i] = (double)N[i];
+        for (int i = 0; i < N_GROUP; i++) {
+            S0[i] = (double) N[i];
             I0[i] = 0.0;
             R0[i] = 0.0;
         };
 
         I0[0]++, S0[0]--;
 
-        for (int istep = 0; istep < dayCount; istep++)
-        {
+        for (int istep = 0; istep < dayCount; istep++) {
 #pragma omp for
-            for (int i = 0; i < N_GROUP; i++)
-            {
+            for (int i = 0; i < N_GROUP; i++) {
 
                 double contact = BETA * I0[i];
-                for (int j = 0; j < N_GROUP; j++)
-                {
+                for (int j = 0; j < N_GROUP; j++) {
                     contact += BETA2 * C[i][j] * I0[j];
                 };
 
@@ -263,8 +275,7 @@ inline void simulation(const int dayCount)
             };
 
 #pragma omp for
-            for (int i = 0; i < N_GROUP; i++)
-            {
+            for (int i = 0; i < N_GROUP; i++) {
                 S0[i] = S[i];
                 I0[i] = I[i];
                 R0[i] = R[i];
@@ -273,28 +284,22 @@ inline void simulation(const int dayCount)
     };
 };
 
-inline double calc_score(const double p1[N_GROUP], const double p2[N_GROUP])
-{
+inline double calc_score(const double p1[N_GROUP], const double p2[N_GROUP]) {
     double score = 0.0;
 #pragma omp parallel for reduction(+ \
-								   : score)
-    for (int i = 0; i < N_GROUP; i++)
-    {
+                                   : score)
+    for (int i = 0; i < N_GROUP; i++) {
         score += (p1[i] - p2[i]) * (p1[i] - p2[i]);
     };
     return score;
 };
 
-inline bool swap_C_targets(const int i1, const int j1, const int i2, const int j2)
-{
-    if (i1 != j1 && i2 != j2 && C[i1][j1] != C[i2][j2])
-    {
+inline bool swap_C_targets(const int i1, const int j1, const int i2, const int j2) {
+    if (i1 != j1 && i2 != j2 && C[i1][j1] != C[i2][j2]) {
         std::swap(C[i1][j1], C[i2][j2]);
         std::swap(C[j1][i1], C[j2][i2]);
         return true;
-    }
-    else
-    {
+    } else {
         return false;
     }
 };
